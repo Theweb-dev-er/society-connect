@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/api/api_providers.dart';
 
 class _Visitor {
+  final String id;
   final String name;
   final String type;
   final String flat;
   final String expectedTime;
 
   const _Visitor({
+    required this.id,
     required this.name,
     required this.type,
     required this.flat,
@@ -43,6 +45,7 @@ class _SecurityPreApprovedScreenState extends ConsumerState<SecurityPreApprovedS
       final data = await service.listVisitors(status: 'expected');
       setState(() {
         _visitors = data.map((v) => _Visitor(
+          id: v['id'] as String? ?? '',
           name: v['name'] as String,
           type: _capitalize(v['type'] as String),
           flat: v['flat'] as String,
@@ -223,6 +226,7 @@ class _SecurityPreApprovedScreenState extends ConsumerState<SecurityPreApprovedS
                                   padding: const EdgeInsets.only(bottom: 16),
                                   child: _buildPreApprovedCard(
                                     context,
+                                    id: _filtered[i].id,
                                     name: _filtered[i].name,
                                     type: _filtered[i].type,
                                     flat: _filtered[i].flat,
@@ -240,6 +244,7 @@ class _SecurityPreApprovedScreenState extends ConsumerState<SecurityPreApprovedS
 
   Widget _buildPreApprovedCard(
     BuildContext context, {
+    required String id,
     required String name,
     required String type,
     required String flat,
@@ -315,10 +320,31 @@ class _SecurityPreApprovedScreenState extends ConsumerState<SecurityPreApprovedS
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Visitor Marked as Entered')),
-                );
+              onPressed: () async {
+                try {
+                  final service = ref.read(visitorServiceProvider);
+                  await service.markEntered(id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$name marked as entered.'),
+                        backgroundColor: const Color(0xFF10B981),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    _fetchVisitors();
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to mark entry: $e'),
+                        backgroundColor: Colors.red,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
               },
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF10B981),

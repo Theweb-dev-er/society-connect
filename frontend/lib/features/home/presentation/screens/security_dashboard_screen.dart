@@ -157,6 +157,24 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                             else
                               Expanded(child: _buildLockedCard('New Entry')),
                             const SizedBox(width: 16),
+                            if (CurrentUser.guardCanAddEntry)
+                              Expanded(
+                                child: _buildGridCard(
+                                  title: 'Waiting at Gate',
+                                  subtitle: 'Pending approval',
+                                  icon: Icons.pending_actions_outlined,
+                                  iconColor: const Color(0xFFEAB308),
+                                  bgColor: const Color(0xFFFEF9C3),
+                                  onTap: () => context.push('/security-waiting'),
+                                ),
+                              )
+                            else
+                              Expanded(child: _buildLockedCard('Waiting at Gate')),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
                             if (CurrentUser.guardCanManagePreApproved)
                               Expanded(
                                 child: _buildGridCard(
@@ -170,11 +188,7 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                               )
                             else
                               Expanded(child: _buildLockedCard('Pre-Approved')),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
+                            const SizedBox(width: 16),
                             if (CurrentUser.guardCanViewInsideList)
                               Expanded(
                                 child: _buildGridCard(
@@ -188,12 +202,16 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                               )
                             else
                               Expanded(child: _buildLockedCard('Inside')),
-                            const SizedBox(width: 16),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
                             if (CurrentUser.guardCanViewGateLogs)
                               Expanded(
                                 child: _buildGridCard(
                                   title: 'Gate Logs',
-                                  subtitle: 'Daily history',
+                                  subtitle: 'Daily history of entries and exits',
                                   icon: Icons.history,
                                   iconColor: const Color(0xFFA855F7),
                                   bgColor: const Color(0xFFFAF5FF),

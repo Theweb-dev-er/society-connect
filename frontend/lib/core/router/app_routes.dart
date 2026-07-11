@@ -17,6 +17,7 @@ class AppRoutes {
   static const String securityPreApproved = '/security-pre-approved';
   static const String securityInside = '/security-inside';
   static const String securityGateLogs = '/security-gate-logs';
+  static const String securityWaiting = '/security-waiting';
   static const String secretaryDashboard = '/secretary-dashboard';
   static const String secretaryCreateNotice = '/secretary-create-notice';
   static const String secretaryManageComplaints = '/secretary-manage-complaints';

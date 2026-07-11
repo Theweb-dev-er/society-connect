@@ -252,6 +252,20 @@ AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
 AWS_S3_VERIFY = True
 
+# Firebase Admin SDK
+FIREBASE_CREDENTIALS_PATH = env("FIREBASE_CREDENTIALS_PATH", default=None)
+if FIREBASE_CREDENTIALS_PATH:
+    import firebase_admin
+    from firebase_admin import credentials
+    try:
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(FIREBASE_CREDENTIALS_PATH)
+            firebase_admin.initialize_app(cred)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger("apps")
+        logger.error(f"Failed to initialize Firebase Admin SDK: {e}")
+
 # Logging
 LOGGING = {
     "version": 1,

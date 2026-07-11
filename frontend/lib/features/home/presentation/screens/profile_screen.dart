@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:society_app/core/router/app_routes.dart';
 import 'package:society_app/core/theme/colors.dart';
+import 'package:society_app/features/auth/data/models/current_user.dart';
+import 'package:society_app/services/notification_service.dart';
+import 'package:society_app/core/api/auth_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -44,9 +47,19 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       Stack(
                         children: [
-                          const CircleAvatar(
+                          CircleAvatar(
                             radius: 50,
-                            backgroundImage: NetworkImage('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2070&auto=format&fit=crop'),
+                            backgroundColor: const Color(0xFF3B82F6),
+                            child: Text(
+                              CurrentUser.name.isNotEmpty
+                                  ? CurrentUser.name[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                           Positioned(
                             bottom: 0,
@@ -63,17 +76,17 @@ class ProfileScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Aman Gupta',
-                        style: TextStyle(
+                      Text(
+                        CurrentUser.name,
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF1F2937),
                         ),
                       ),
-                      const Text(
-                        '+91 98765 43210',
-                        style: TextStyle(
+                      Text(
+                        CurrentUser.phone.isNotEmpty ? CurrentUser.phone : 'No Phone Number',
+                        style: const TextStyle(
                           color: Color(0xFF6B7280),
                           fontSize: 14,
                         ),
@@ -85,9 +98,13 @@ class ProfileScreen extends StatelessWidget {
                           color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(100),
                         ),
-                        child: const Text(
-                          'Flat 402 • Block A',
-                          style: TextStyle(
+                        child: Text(
+                          CurrentUser.flatNo != null
+                              ? '${CurrentUser.flatNo!.startsWith("Flat") ? "" : "Flat "}${CurrentUser.flatNo} • ${CurrentUser.societyName ?? "Sunshine Residency"}'
+                              : (CurrentUser.role == 'security_guard'
+                                  ? 'Guard • ${CurrentUser.societyName ?? "Sunshine Residency"}'
+                                  : 'Resident • ${CurrentUser.societyName ?? "Sunshine Residency"}'),
+                          style: const TextStyle(
                             color: Color(0xFF3B82F6),
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -102,10 +119,21 @@ class ProfileScreen extends StatelessWidget {
 
                 // Account Sections
                 _buildSectionHeader('Account Information'),
-                _buildProfileItem(Icons.person_outline, 'Personal Details', 'Name, Email, Phone'),
-                _buildProfileItem(Icons.apartment_outlined, 'Flat Information', 'Block, Flat Number, Area'),
+                _buildProfileItem(
+                  Icons.person_outline,
+                  'Personal Details',
+                  'Name: ${CurrentUser.name}${CurrentUser.email.isNotEmpty ? " • Email: ${CurrentUser.email}" : ""}',
+                ),
+                _buildProfileItem(
+                  Icons.apartment_outlined,
+                  'Flat Information',
+                  CurrentUser.flatNo != null
+                      ? 'Flat Number: ${CurrentUser.flatNo!.replaceAll("Flat ", "")} • ${CurrentUser.societyName ?? "Sunshine Residency"}'
+                      : 'Role: ${CurrentUser.role == "security_guard" ? "Security Guard" : "Resident"}',
+                ),
                 _buildProfileItem(Icons.family_restroom_outlined, 'Family Members', '3 Members added'),
                 _buildProfileItem(Icons.directions_car_outlined, 'My Vehicles', '2 Vehicles registered'),
+
 
                 const SizedBox(height: 8),
 
@@ -128,7 +156,13 @@ class ProfileScreen extends StatelessWidget {
                   child: SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => context.go(AppRoutes.login),
+                      onPressed: () async {
+                        await NotificationService().deleteDeviceToken();
+                        await AuthService().logout();
+                        if (context.mounted) {
+                          context.go(AppRoutes.login);
+                        }
+                      },
                       icon: const Icon(Icons.logout, size: 18),
                       label: const Text('Logout'),
                       style: OutlinedButton.styleFrom(
@@ -140,6 +174,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+
                   ),
                 ),
                 
@@ -243,11 +278,11 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            _buildTextField('Full Name', 'Aman Gupta'),
+            _buildTextField('Full Name', CurrentUser.name),
             const SizedBox(height: 16),
-            _buildTextField('Email Address', 'aman.gupta@example.com'),
+            _buildTextField('Email Address', CurrentUser.email),
             const SizedBox(height: 16),
-            _buildTextField('Phone Number', '+91 98765 43210'),
+            _buildTextField('Phone Number', CurrentUser.phone),
             const Spacer(),
             SizedBox(
               width: double.infinity,

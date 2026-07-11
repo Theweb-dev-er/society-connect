@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_routes.dart';
+import '../../features/auth/data/models/current_user.dart';
 
 import '../../features/auth/presentation/screens/login_page.dart';
 import '../../features/auth/presentation/screens/register_page.dart';
@@ -19,6 +20,7 @@ import '../../features/home/presentation/screens/security_new_entry_screen.dart'
 import '../../features/home/presentation/screens/security_pre_approved_screen.dart';
 import '../../features/home/presentation/screens/security_inside_screen.dart';
 import '../../features/home/presentation/screens/security_gate_logs_screen.dart';
+import '../../features/home/presentation/screens/security_waiting_screen.dart';
 import '../../features/home/presentation/screens/secretary_dashboard_screen.dart';
 import '../../features/home/presentation/screens/secretary_create_notice_screen.dart';
 import '../../features/home/presentation/screens/secretary_manage_complaints_screen.dart';
@@ -38,13 +40,32 @@ import '../../features/auth/presentation/screens/manage_residents_screen.dart';
 import '../../features/auth/presentation/screens/manage_security_guards_screen.dart';
 import '../../features/subscription/presentation/screens/subscribe_screen.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
+  // Routes that don't need authentication
+  const publicRoutes = {
+    AppRoutes.splash,
+    AppRoutes.login,
+    AppRoutes.register,
+    AppRoutes.otpVerification,
+  };
+
   return GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: AppRoutes.splash,
     redirect: (context, state) {
-      if (state.matchedLocation == '/') {
+      final location = state.matchedLocation;
+
+      // If landing on root, go to splash
+      if (location == '/') return AppRoutes.splash;
+
+      // If navigating to a protected route and user is NOT loaded in memory,
+      // redirect through splash so it can restore the session from storage.
+      if (!publicRoutes.contains(location) && CurrentUser.accessToken == null) {
         return AppRoutes.splash;
       }
+
       return null;
     },
     routes: [
@@ -89,7 +110,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.visitors,
-        builder: (context, state) => const VisitorVerificationScreen(),
+        builder: (context, state) {
+          final visitorId = state.uri.queryParameters['visitorId'];
+          return VisitorVerificationScreen(visitorId: visitorId);
+        },
       ),
       GoRoute(
         path: '/visitor-history',
@@ -138,6 +162,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.securityGateLogs,
         builder: (context, state) => const SecurityGateLogsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.securityWaiting,
+        builder: (context, state) => const SecurityWaitingScreen(),
       ),
       GoRoute(
         path: AppRoutes.secretaryDashboard,

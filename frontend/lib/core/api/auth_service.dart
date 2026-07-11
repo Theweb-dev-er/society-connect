@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/auth/data/models/current_user.dart';
 import 'api_client.dart';
 
@@ -6,6 +7,35 @@ class AuthService {
   final Dio _dio;
 
   AuthService() : _dio = ApiClient().dio;
+
+  /// Save tokens to SharedPreferences
+  Future<void> saveTokens(String access, String refresh) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('accessToken', access);
+    await prefs.setString('refreshToken', refresh);
+  }
+
+  /// Get tokens from SharedPreferences
+  Future<Map<String, String?>> getSavedTokens() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'access': prefs.getString('accessToken'),
+      'refresh': prefs.getString('refreshToken'),
+    };
+  }
+
+  /// Clear tokens from SharedPreferences
+  Future<void> clearSavedTokens() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('accessToken');
+    await prefs.remove('refreshToken');
+  }
+
+  /// Logout user
+  Future<void> logout() async {
+    await clearSavedTokens();
+    CurrentUser.clear();
+  }
 
   /// Send OTP to phone number
   Future<Map<String, dynamic>> sendOtp(String phone) async {
@@ -26,13 +56,16 @@ class AuthService {
 
     // Store tokens in CurrentUser
     if (data.containsKey('access') && data.containsKey('refresh')) {
-      CurrentUser.accessToken = data['access'] as String;
-      CurrentUser.refreshToken = data['refresh'] as String;
+      final access = data['access'] as String;
+      final refresh = data['refresh'] as String;
+      CurrentUser.accessToken = access;
+      CurrentUser.refreshToken = refresh;
+      await saveTokens(access, refresh);
 
       // Update user info if available
       if (data.containsKey('user')) {
         final user = data['user'] as Map<String, dynamic>;
-        _updateCurrentUser(user, data['access'] as String, data['refresh'] as String);
+        _updateCurrentUser(user, access, refresh);
       }
     }
 
@@ -59,7 +92,9 @@ class AuthService {
       );
       final data = response.data as Map<String, dynamic>;
       if (data.containsKey('access')) {
-        CurrentUser.accessToken = data['access'] as String;
+        final access = data['access'] as String;
+        CurrentUser.accessToken = access;
+        await saveTokens(access, refresh);
         return true;
       }
     } catch (_) {
@@ -79,7 +114,10 @@ class AuthService {
     CurrentUser.setUser(
       name: (user['name'] as String?) ?? 'User',
       role: role,
-      owner: false,
+      phone: (user['phone'] as String?) ?? '',
+      email: (user['email'] as String?) ?? '',
+      flatNo: user['flat_no'] as String?,
+      owner: (user['is_owner'] as bool?) ?? false,
       admin: (user['is_admin'] as bool?) ?? false,
       maker: (user['is_maker'] as bool?) ?? false,
       checker: (user['is_checker'] as bool?) ?? false,

@@ -30,7 +30,7 @@ from apps.visitors.models import GateLog, Visitor
 
 FIRST_NAMES = ["Rohan", "Priya", "Rajesh", "Meera", "Vikram", "Lakshmi", "Ravi", "Anita", "Suresh", "Deepa"]
 LAST_NAMES = ["Mehta", "Sharma", "Kumar", "Singh", "Patel", "Gupta", "Reddy", "Nair", "Iyer", "Joshi"]
-FLAT_NOS = [f"Flat {i}" for i in range(101, 520)]
+FLAT_NOS = [f"Flat {i}" for i in range(200, 520)]
 VISITOR_TYPES = ["guest", "delivery", "service"]
 
 
@@ -65,15 +65,61 @@ def create_residents(society, count=10):
             },
         )
         if created:
+            flat_no = random.choice(FLAT_NOS)
+            while ResidentProfile.objects.filter(society=society, flat_no=flat_no).exists():
+                flat_no = random.choice(FLAT_NOS)
             profile, _ = ResidentProfile.objects.get_or_create(
                 user=user,
                 defaults={
                     "society": society,
-                    "flat_no": random.choice(FLAT_NOS),
+                    "flat_no": flat_no,
                     "is_owner": random.choice([True, True, False]),
                 },
             )
             residents.append(user)
+    return residents
+
+
+def create_explicit_residents(society):
+    """Create the explicit test residents from TEST_CREDENTIALS.txt"""
+    explicit_residents = [
+        ("Amit Verma", "9111111111", "Flat 101"),
+        ("Neha Gupta", "9222222222", "Flat 102"),
+        ("Suresh Patel", "9333333333", "Flat 103"),
+        ("Priya Nair", "9444444444", "Flat 104"),
+        ("Vikram Rao", "9555555555", "Flat 105"),
+        ("Ananya Desai", "9666666666", "Flat 106"),
+        ("Rajesh Sharma", "9777777777", "Flat 107"),
+        ("Kavita Menon", "9888888888", "Flat 108"),
+        ("Deepak Joshi", "9900000001", "Flat 109"),
+        ("Meera Iyer", "9900000002", "Flat 110"),
+    ]
+    residents = []
+    for name, phone, flat in explicit_residents:
+        user, created = User.objects.get_or_create(
+            phone=phone,
+            defaults={
+                "name": name,
+                "society": society,
+                "role": "resident",
+                "is_active": True,
+            },
+        )
+        if not created:
+            user.name = name
+            user.role = "resident"
+            user.society = society
+            user.save()
+        
+        ResidentProfile.objects.update_or_create(
+            user=user,
+            defaults={
+                "society": society,
+                "flat_no": flat,
+                "is_owner": True,
+            },
+        )
+        residents.append(user)
     return residents
 
 
@@ -112,7 +158,7 @@ def create_workflow_users(society):
         ("Checker Chandu", "9999999993", "is_checker"),
         ("Approver Anand", "9999999994", "is_approver"),
     ]
-    for name, phone, role_flag in configs:
+    for index, (name, phone, role_flag) in enumerate(configs):
         defaults = {
             "name": name,
             "society": society,
@@ -132,9 +178,9 @@ def create_workflow_users(society):
             user.is_checker = role_flag == "is_checker"
             user.is_approver = role_flag == "is_approver"
             user.save()
-        ResidentProfile.objects.get_or_create(
+        ResidentProfile.objects.update_or_create(
             user=user,
-            defaults={"society": society, "flat_no": f"Flat {110 + i}", "is_owner": True},
+            defaults={"society": society, "flat_no": f"Flat {111 + index}", "is_owner": True},
         )
         workflow_users.append(user)
     return workflow_users
@@ -144,8 +190,8 @@ def create_security_guards(society):
     """Create security guard users."""
     guards = []
     for name, phone, gate in [
-        ("Guard Ramesh", "8888888881", "Main Gate"),
-        ("Guard Suresh", "8888888882", "Side Gate"),
+        ("Ram Singh", "8888888881", "Main Gate"),
+        ("Sunil Yadav", "8888888882", "Side Gate"),
     ]:
         user, created = User.objects.get_or_create(
             phone=phone,
@@ -272,6 +318,8 @@ def main():
     print(f"  Society: {society.name} ({society.code})")
 
     residents = create_residents(society, count=10)
+    explicit_residents = create_explicit_residents(society)
+    residents.extend(explicit_residents)
     print(f"  Residents: {len(residents)}")
 
     admins = create_admins(society)

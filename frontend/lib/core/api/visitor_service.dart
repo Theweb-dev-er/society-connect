@@ -25,12 +25,18 @@ class VisitorService {
     required String name,
     required String type,
     required String flat,
+    String? phone,
+    String? vehicleNumber,
+    int? peopleCount,
     String? expectedTime,
   }) async {
     final response = await _dio.post('/visitors/', data: {
       'name': name,
       'type': type,
       'flat': flat,
+      if (phone != null) 'phone': phone,
+      if (vehicleNumber != null) 'vehicle_number': vehicleNumber,
+      if (peopleCount != null) 'people_count': peopleCount,
       if (expectedTime != null) 'expected_time': expectedTime,
     });
     return response.data as Map<String, dynamic>;
@@ -59,5 +65,11 @@ class VisitorService {
     final response = await _dio.get('/visitors/gate-logs/');
     final data = response.data as Map<String, dynamic>;
     return data['results'] as List<dynamic>? ?? [];
+  }
+
+  /// Get specific visitor details
+  Future<Map<String, dynamic>> getVisitor(String visitorId) async {
+    final response = await _dio.get('/visitors/$visitorId/');
+    return response.data as Map<String, dynamic>;
   }
 }
