@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:society_app/core/api/auth_service.dart';
 import 'package:society_app/core/router/app_routes.dart';
+import 'package:society_app/features/auth/data/models/current_user.dart';
+import 'package:society_app/services/notification_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -31,13 +34,71 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
 
     _controller.forward();
+    _initApp();
+  }
 
-    // Simulate auth check and navigate
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        context.go(AppRoutes.login);
+  void _initApp() async {
+    final startTime = DateTime.now();
+    String targetRoute = AppRoutes.login;
+
+    try {
+      final authService = AuthService();
+      final tokens = await authService.getSavedTokens();
+      final access = tokens['access'];
+      final refresh = tokens['refresh'];
+
+      if (access != null && access.isNotEmpty) {
+        CurrentUser.accessToken = access;
+        CurrentUser.refreshToken = refresh;
+
+        String? role;
+
+        try {
+          // Try fetching user with the saved access token
+          final userData = await authService.fetchMe();
+          role = userData['role'] as String?;
+        } catch (fetchErr) {
+          debugPrint('[Splash] fetchMe failed, attempting token refresh: $fetchErr');
+          // Access token may be expired — try to refresh it
+          final refreshed = await authService.refreshToken();
+          if (refreshed) {
+            try {
+              final userData = await authService.fetchMe();
+              role = userData['role'] as String?;
+            } catch (e2) {
+              debugPrint('[Splash] fetchMe still failed after refresh: $e2');
+            }
+          }
+        }
+
+        if (role != null) {
+          // Session confirmed valid — route to dashboard
+          if (role == 'security_guard') {
+            targetRoute = AppRoutes.securityDashboard;
+          } else {
+            targetRoute = AppRoutes.dashboard;
+          }
+          // Only initialize FCM after session is confirmed
+          NotificationService().initialize();
+        } else {
+          // Tokens invalid — clear them so user logs in fresh
+          await authService.clearSavedTokens();
+        }
       }
-    });
+    } catch (e) {
+      debugPrint('[Splash] Session restore failed: $e');
+    }
+
+    final elapsed = DateTime.now().difference(startTime);
+    final remainingDelay = const Duration(milliseconds: 1500) - elapsed;
+
+    if (remainingDelay > Duration.zero) {
+      await Future.delayed(remainingDelay);
+    }
+
+    if (mounted) {
+      context.go(targetRoute);
+    }
   }
 
   @override

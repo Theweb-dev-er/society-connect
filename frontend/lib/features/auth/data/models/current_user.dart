@@ -1,6 +1,9 @@
 class CurrentUser {
-  static String name = 'Rajesh Sharma';
+  static String name = 'Guest';
   static String role = 'resident';
+  static String phone = '';
+  static String email = '';
+  static String? flatNo;
   static bool isOwner = false;
   static bool isAdmin = false;
   static bool isMaker = false;
@@ -22,6 +25,9 @@ class CurrentUser {
   static void setUser({
     required String name,
     required String role,
+    String phone = '',
+    String email = '',
+    String? flatNo,
     bool owner = false,
     bool admin = false,
     bool maker = false,
@@ -41,6 +47,9 @@ class CurrentUser {
   }) {
     CurrentUser.name = name;
     CurrentUser.role = role;
+    CurrentUser.phone = phone;
+    CurrentUser.email = email;
+    CurrentUser.flatNo = flatNo;
     isOwner = owner;
     isAdmin = admin;
     isMaker = maker;
@@ -62,6 +71,9 @@ class CurrentUser {
   static void clear() {
     name = 'Guest';
     role = 'resident';
+    phone = '';
+    email = '';
+    flatNo = null;
     isOwner = false;
     isAdmin = false;
     isMaker = false;

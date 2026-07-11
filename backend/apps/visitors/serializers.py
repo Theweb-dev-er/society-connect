@@ -15,6 +15,9 @@ class VisitorSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "phone",
+            "vehicle_number",
+            "people_count",
             "type",
             "flat",
             "expected_time",
@@ -32,11 +35,14 @@ class VisitorSerializer(serializers.ModelSerializer):
 class VisitorCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Visitor
-        fields = ["name", "type", "flat", "expected_time"]
+        fields = ["name", "phone", "vehicle_number", "people_count", "type", "flat", "expected_time"]
 
 
 class GateLogSerializer(serializers.ModelSerializer):
     visitor_name = serializers.CharField(source="visitor.name", read_only=True)
+    visitor_phone = serializers.CharField(source="visitor.phone", read_only=True)
+    visitor_vehicle_number = serializers.CharField(source="visitor.vehicle_number", read_only=True)
+    visitor_people_count = serializers.IntegerField(source="visitor.people_count", read_only=True)
     visitor_flat = serializers.CharField(source="visitor.flat", read_only=True)
     visitor_type = serializers.CharField(source="visitor.type", read_only=True)
     visitor_entry_time = serializers.DateTimeField(source="visitor.entry_time", read_only=True)
@@ -49,6 +55,9 @@ class GateLogSerializer(serializers.ModelSerializer):
             "id",
             "visitor",
             "visitor_name",
+            "visitor_phone",
+            "visitor_vehicle_number",
+            "visitor_people_count",
             "visitor_flat",
             "visitor_type",
             "visitor_entry_time",

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:society_app/core/api/api_providers.dart';
 import 'package:society_app/core/router/app_routes.dart';
 import '../../data/models/current_user.dart';
+import '../../../../services/notification_service.dart';
+
 
 class OtpVerificationPage extends ConsumerStatefulWidget {
   final String roleName;
@@ -85,9 +87,12 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
           accessToken: CurrentUser.accessToken,
           refreshToken: CurrentUser.refreshToken,
         );
+        NotificationService().initialize();
         context.go(AppRoutes.dashboard);
         return;
       }
+
+      NotificationService().initialize();
 
       // Route based on role
       if (role == 'security_guard') {

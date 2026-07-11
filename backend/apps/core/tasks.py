@@ -31,3 +31,12 @@ def health_check_task():
     except Exception as e:
         logger.error(f"[Celery] Health check failed: {e}")
         return {"db": False, "error": str(e)}
+
+
+@shared_task
+def send_push_notification_task(user_ids, title, body, data=None):
+    """Celery task to send push notifications asynchronously."""
+    from .notifications import send_push_notification
+
+    send_push_notification(user_ids, title, body, data)
+

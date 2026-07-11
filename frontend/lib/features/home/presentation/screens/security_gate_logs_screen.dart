@@ -311,7 +311,7 @@ class _SecurityGateLogsScreenState extends ConsumerState<SecurityGateLogsScreen>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '$action • Flat $flat',
+                    '$action • ${flat.startsWith("Flat") ? "" : "Flat "}$flat',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF6B7280),
@@ -423,7 +423,19 @@ class _SecurityGateLogsScreenState extends ConsumerState<SecurityGateLogsScreen>
             const SizedBox(height: 24),
             const Divider(color: Color(0xFFE5E7EB)),
             const SizedBox(height: 16),
-            _buildDetailRow(Icons.apartment, 'Destination', 'Flat ${log['visitor_flat'] ?? 'Unknown'}'),
+            _buildDetailRow(Icons.apartment, 'Destination', '${(log['visitor_flat'] ?? 'Unknown').toString().startsWith("Flat") ? "" : "Flat "}${log['visitor_flat'] ?? 'Unknown'}'),
+            if (log['visitor_phone'] != null && (log['visitor_phone'] as String).isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildDetailRow(Icons.phone, 'Mobile Number', log['visitor_phone']),
+            ],
+            if (log['visitor_vehicle_number'] != null && (log['visitor_vehicle_number'] as String).isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildDetailRow(Icons.directions_car, 'Vehicle Number', log['visitor_vehicle_number']),
+            ],
+            if (log['visitor_people_count'] != null && (log['visitor_people_count'] as int) > 1) ...[
+              const SizedBox(height: 16),
+              _buildDetailRow(Icons.group, 'Number of People', log['visitor_people_count'].toString()),
+            ],
             const SizedBox(height: 16),
             _buildDetailRow(Icons.login, 'Entry Time', entryTimeStr),
             const SizedBox(height: 16),

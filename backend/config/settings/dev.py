@@ -39,7 +39,11 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
 OTP_RATE_LIMIT_PER_PHONE = 100
 OTP_RATE_LIMIT_WINDOW_SECONDS = 60
 
+# Celery synchronous execution in development
+CELERY_TASK_ALWAYS_EAGER = True
+
 # Debug toolbar
 # INSTALLED_APPS += ["debug_toolbar"]
 # MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
 # INTERNAL_IPS = ["127.0.0.1"]
+

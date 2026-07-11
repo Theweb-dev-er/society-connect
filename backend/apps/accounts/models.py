@@ -96,3 +96,25 @@ class User(AbstractBaseUser, PermissionsMixin):
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
+
+
+class DeviceToken(models.Model):
+    """FCM device registration token for push notifications."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="device_tokens")
+    token = models.CharField(max_length=255, unique=True, db_index=True)
+    device_type = models.CharField(
+        max_length=20,
+        choices=[("android", "Android"), ("ios", "iOS"), ("web", "Web")],
+        default="android",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "device_tokens"
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.user.phone} - {self.device_type} ({self.token[:10]}...)"

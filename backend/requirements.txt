@@ -43,3 +43,6 @@ whitenoise>=6.7.0
 # Dev
 django-extensions>=3.2.0
 ipython>=8.26.0
+
+# Firebase FCM
+firebase-admin>=6.5.0

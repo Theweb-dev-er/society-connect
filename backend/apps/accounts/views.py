@@ -9,8 +9,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User
-from .serializers import MeSerializer, OTPSendSerializer, OTPVerifySerializer
+from .models import DeviceToken, User
+from .serializers import DeviceTokenSerializer, MeSerializer, OTPSendSerializer, OTPVerifySerializer
 from .tasks import send_otp_async
 from .utils import generate_otp, send_otp_sms, verify_otp
 
@@ -103,3 +103,36 @@ class TokenRefreshView(APIView):
         from rest_framework_simplejwt.views import TokenRefreshView as JWTRFView
 
         return JWTRFView.as_view()(request._request)
+
+
+class DeviceTokenView(APIView):
+    """Register or delete FCM device registration tokens."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = DeviceTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data["token"].strip()
+        device_type = serializer.validated_data.get("device_type", "android")
+
+        # Upsert: If token already exists, associate it with the current user
+        # (in case a device was handed to another user).
+        device_token, created = DeviceToken.objects.update_or_create(
+            token=token,
+            defaults={"user": request.user, "device_type": device_type},
+        )
+
+        return Response(
+            DeviceTokenSerializer(device_token).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def delete(self, request):
+        token = request.data.get("token")
+        if not token:
+            return Response({"detail": "Token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        DeviceToken.objects.filter(user=request.user, token=token).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+

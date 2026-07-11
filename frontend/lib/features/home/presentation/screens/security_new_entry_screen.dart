@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/api/visitor_service.dart';
 
 class SecurityNewEntryScreen extends StatefulWidget {
   const SecurityNewEntryScreen({super.key});
@@ -11,6 +12,23 @@ class SecurityNewEntryScreen extends StatefulWidget {
 class _SecurityNewEntryScreenState extends State<SecurityNewEntryScreen> {
   String? _selectedVisitorType;
   final List<String> _visitorTypes = ['Guest', 'Delivery', 'Maid', 'Vendor', 'Other'];
+
+  final _mobileController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _peopleController = TextEditingController();
+  final _flatController = TextEditingController();
+  final _vehicleController = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _mobileController.dispose();
+    _nameController.dispose();
+    _peopleController.dispose();
+    _flatController.dispose();
+    _vehicleController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,28 +61,84 @@ class _SecurityNewEntryScreenState extends State<SecurityNewEntryScreen> {
           children: [
             _buildSectionTitle('Visitor Details'),
             const SizedBox(height: 16),
-            _buildTextField('Mobile Number', Icons.phone),
+            _buildTextField('Mobile Number', Icons.phone, _mobileController, keyboardType: TextInputType.phone),
             const SizedBox(height: 16),
-            _buildTextField('Full Name', Icons.person),
+            _buildTextField('Full Name', Icons.person, _nameController),
             const SizedBox(height: 16),
-            _buildTextField('Number of People', Icons.group, keyboardType: TextInputType.number),
+            _buildTextField('Number of People', Icons.group, _peopleController, keyboardType: TextInputType.number),
             const SizedBox(height: 16),
             _buildDropdownField('Visitor Type (e.g. Delivery, Guest)', Icons.category),
             const SizedBox(height: 32),
             _buildSectionTitle('Visit Details'),
             const SizedBox(height: 16),
-            _buildTextField('Block / Flat Number', Icons.apartment),
+            _buildTextField('Block / Flat Number', Icons.apartment, _flatController),
             const SizedBox(height: 16),
-            _buildTextField('Vehicle Number (Optional)', Icons.directions_car),
+            _buildTextField('Vehicle Number (Optional)', Icons.directions_car, _vehicleController),
             const SizedBox(height: 32),
             SizedBox(
               height: 56,
               child: FilledButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Visitor Logged Successfully')),
-                  );
-                  context.pop();
+                onPressed: _submitting ? null : () async {
+                  final name = _nameController.text.trim();
+                  final mobile = _mobileController.text.trim();
+                  final flat = _flatController.text.trim();
+                  final type = _selectedVisitorType;
+                  final people = _peopleController.text.trim();
+                  final vehicle = _vehicleController.text.trim();
+
+                  if (name.isEmpty || flat.isEmpty || type == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please fill in Name, Flat, and Visitor Type.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  setState(() => _submitting = true);
+
+                  try {
+                    // Map to backend choices: "guest", "delivery", "service"
+                    String backendType = "guest";
+                    if (type == 'Delivery') {
+                      backendType = 'delivery';
+                    } else if (type == 'Maid' || type == 'Vendor' || type == 'Other') {
+                      backendType = 'service';
+                    }
+
+                    await VisitorService().createVisitor(
+                      name: name,
+                      type: backendType,
+                      flat: flat,
+                      phone: mobile.isNotEmpty ? mobile : null,
+                      vehicleNumber: vehicle.isNotEmpty ? vehicle : null,
+                      peopleCount: int.tryParse(people) ?? 1,
+                    );
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Visitor Logged Successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      context.pop();
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to log visitor: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setState(() => _submitting = false);
+                    }
+                  }
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF3B82F6),
@@ -72,10 +146,16 @@ class _SecurityNewEntryScreenState extends State<SecurityNewEntryScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text(
-                  'Log Entry',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                child: _submitting
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text(
+                        'Log Entry',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
               ),
             ),
           ],
@@ -97,8 +177,9 @@ class _SecurityNewEntryScreenState extends State<SecurityNewEntryScreen> {
     );
   }
 
-  Widget _buildTextField(String hint, IconData icon, {TextInputType? keyboardType}) {
+  Widget _buildTextField(String hint, IconData icon, TextEditingController controller, {TextInputType? keyboardType}) {
     return TextField(
+      controller: controller,
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hint,
@@ -155,3 +236,4 @@ class _SecurityNewEntryScreenState extends State<SecurityNewEntryScreen> {
     );
   }
 }
+

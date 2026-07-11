@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/api/visitor_service.dart';
+import '../widgets/visitor_notification_dialog.dart';
 
 class VisitorVerificationScreen extends StatefulWidget {
-  const VisitorVerificationScreen({super.key});
+  final String? visitorId;
+
+  const VisitorVerificationScreen({
+    super.key,
+    this.visitorId,
+  });
 
   @override
   State<VisitorVerificationScreen> createState() => _VisitorVerificationScreenState();
@@ -10,11 +17,91 @@ class VisitorVerificationScreen extends StatefulWidget {
 
 class _VisitorVerificationScreenState extends State<VisitorVerificationScreen> {
   bool _isLoading = false;
+  List<dynamic> _visitors = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchVisitors();
+    if (widget.visitorId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _autoOpenVisitorDialog(widget.visitorId!);
+      });
+    }
+  }
+
+  Future<void> _autoOpenVisitorDialog(String visitorId) async {
+    try {
+      final visitor = await VisitorService().getVisitor(visitorId);
+      if (mounted) {
+        VisitorNotificationDialog.show(
+          context,
+          visitor: visitor,
+          onActionCompleted: _refreshVisitors,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load visitor details: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _fetchVisitors() async {
+    if (mounted) setState(() => _isLoading = true);
+    try {
+      final data = await VisitorService().listVisitors(status: 'expected');
+      if (mounted) {
+        setState(() {
+          _visitors = data;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load pending approvals: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   Future<void> _refreshVisitors() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) setState(() => _isLoading = false);
+    await _fetchVisitors();
+  }
+
+  String _formatTime(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final dt = DateTime.parse(dateStr).toLocal();
+      final period = dt.hour >= 12 ? 'PM' : 'AM';
+      final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+      final minute = dt.minute.toString().padLeft(2, '0');
+      return '$hour:$minute $period';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  IconData _getIconForType(String? type) {
+    final t = type?.toLowerCase() ?? 'guest';
+    if (t == 'delivery') {
+      return Icons.local_shipping_outlined;
+    } else if (t == 'service') {
+      return Icons.build_outlined;
+    }
+    return Icons.face_outlined;
   }
 
   @override
@@ -122,9 +209,9 @@ class _VisitorVerificationScreenState extends State<VisitorVerificationScreen> {
                           color: const Color(0xFFFEF2F2),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
-                          '2',
-                          style: TextStyle(
+                        child: Text(
+                          '${_visitors.length}',
+                          style: const TextStyle(
                             color: Color(0xFFEF4444),
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -136,25 +223,50 @@ class _VisitorVerificationScreenState extends State<VisitorVerificationScreen> {
                   
                   const SizedBox(height: 16),
                   
-                  // Pending Approval Cards
-                  _buildPendingCard(
-                    context: context,
-                    name: 'Rajesh Kumar',
-                    type: 'Delivery',
-                    time: '3:45 PM',
-                    status: 'Waiting at Main Gate',
-                    icon: Icons.face,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildPendingCard(
-                    context: context,
-                    name: 'Priya Sharma',
-                    type: 'Guest',
-                    time: '3:50 PM',
-                    status: 'Waiting at Main Gate',
-                    icon: Icons.face_3,
-                    guestCount: 3,
-                  ),
+                  if (_isLoading && _visitors.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (_visitors.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 48, color: Color(0xFF10B981)),
+                          SizedBox(height: 16),
+                          Text(
+                            'No Pending Approvals',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF1F2937)),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'All visitors have been checked in.',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _visitors.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        final visitor = _visitors[index];
+                        return _buildPendingCard(
+                          context: context,
+                          visitor: visitor,
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -176,375 +288,160 @@ class _VisitorVerificationScreenState extends State<VisitorVerificationScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 10,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: bgColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 20,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2937),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Color(0xFF6B7280),
-            ),
-          ),
-        ],
-      ),
-    ));
+    );
   }
 
   Widget _buildPendingCard({
     required BuildContext context,
-    required String name,
-    required String type,
-    required String time,
-    required String status,
-    required IconData icon,
-    int? guestCount,
+    required Map<String, dynamic> visitor,
   }) {
+    final name = visitor['name'] ?? 'Unknown';
+    final type = visitor['type']?.toString().toUpperCase() ?? 'GUEST';
+    final time = _formatTime(visitor['created_at']);
+    final icon = _getIconForType(visitor['type']);
+
     return GestureDetector(
-      onTap: () => _showPendingApprovalDialog(
-        context,
-        name: name,
-        type: type,
-        time: time,
-        icon: icon,
-        guestCount: guestCount,
-      ),
+      onTap: () => _showPendingApprovalDialog(context, visitor),
       child: Container(
         decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: const BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: Color(0xFFF97316),
-                width: 4,
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: const BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: Color(0xFFF97316),
+                  width: 4,
+                ),
               ),
             ),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F9FA),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFF97316).withOpacity(0.3), width: 1.5),
-                ),
-                child: Center(
-                  child: Icon(icon, color: const Color(0xFFF59E0B), size: 28),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      guestCount != null && guestCount > 1 ? '$name + ${guestCount - 1} others' : name,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1F2937),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$type • $time',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        status,
-                        style: const TextStyle(
-                          color: Color(0xFFF97316),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ], // Column.children
-                ), // Column
-              ), // Expanded
-            ], // Row.children
-          ), // Row
-        ), // Container (inner)
-      ), // ClipRRect
-      ), // Container (outer)
-    ); // GestureDetector
-  }
-
-  void _showPendingApprovalDialog(
-    BuildContext context, {
-    required String name,
-    required String type,
-    required String time,
-    required IconData icon,
-    int? guestCount,
-  }) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: Colors.white,
-          child: Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(maxWidth: 400),
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Visitor at Gate',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1F2937),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20, color: Color(0xFF6B7280)),
-                      onPressed: () => Navigator.pop(context),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Avatar
                 Container(
-                  width: 80,
-                  height: 80,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEEF2FF),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FA),
                     shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFF97316).withOpacity(0.3), width: 1.5),
                   ),
                   child: Center(
-                    child: Icon(icon, size: 40, color: const Color(0xFFF59E0B)),
+                    child: Icon(icon, color: const Color(0xFFF59E0B), size: 28),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // Name
-                Text(
-                  guestCount != null && guestCount > 1 ? '$name + ${guestCount - 1}' : name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Type Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    type,
-                    style: const TextStyle(
-                      color: Color(0xFFF97316),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                // Details List
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.access_time_outlined, size: 20, color: Color(0xFF9CA3AF)),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Requested At',
-                            style: TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
-                          ),
-                          Text(
-                            time,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
-                          ),
-                        ],
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2937),
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined, size: 20, color: Color(0xFF9CA3AF)),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Gate Location',
-                            style: TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
-                          ),
-                          Text(
-                            'Main Gate',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1F2937)),
-                          ),
-                        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        '$type • $time',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF6B7280),
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Allow Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Allow Entry',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Action Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          backgroundColor: const Color(0xFFFEF2F2),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7ED),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Text(
-                          'Deny',
+                          'Waiting at Main Gate',
                           style: TextStyle(
-                            color: Color(0xFFEF4444),
-                            fontSize: 14,
+                            color: Color(0xFFF97316),
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () {},
-                        style: TextButton.styleFrom(
-                          backgroundColor: const Color(0xFFEFF6FF),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.call_outlined, size: 16, color: Color(0xFF3B82F6)),
-                            SizedBox(width: 8),
-                            Text(
-                              'Call Security',
-                              style: TextStyle(
-                                color: Color(0xFF3B82F6),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  void _showPendingApprovalDialog(
+    BuildContext context,
+    Map<String, dynamic> visitor,
+  ) {
+    VisitorNotificationDialog.show(
+      context,
+      visitor: visitor,
+      onActionCompleted: _refreshVisitors,
     );
   }
 }
