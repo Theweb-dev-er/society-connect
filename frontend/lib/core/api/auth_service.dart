@@ -103,6 +103,22 @@ class AuthService {
     return false;
   }
 
+  /// Fetch society details by code
+  Future<Map<String, dynamic>?> fetchSocietyByCode(String code) async {
+    try {
+      final response = await _dio.get('/societies/by-code/', queryParameters: {'code': code});
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Create resident profile
+  Future<Map<String, dynamic>> createResidentProfile(Map<String, dynamic> data) async {
+    final response = await _dio.post('/residents/register/', data: data);
+    return response.data as Map<String, dynamic>;
+  }
+
   void _updateCurrentUser(
     Map<String, dynamic> user,
     String? access,
@@ -116,6 +132,7 @@ class AuthService {
       role: role,
       phone: (user['phone'] as String?) ?? '',
       email: (user['email'] as String?) ?? '',
+      wing: user['wing'] as String?,
       flatNo: user['flat_no'] as String?,
       owner: (user['is_owner'] as bool?) ?? false,
       admin: (user['is_admin'] as bool?) ?? false,
@@ -130,6 +147,8 @@ class AuthService {
       societyId: user['society']?.toString(),
       societyName: user['society_name'] as String?,
       societyCode: user['society_code'] as String?,
+      societyWings: (user['society_wings'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      societyBhkTypes: (user['society_bhk_types'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
       accessToken: access,
       refreshToken: refresh,
     );

@@ -74,6 +74,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    CurrentUser.role.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                             Row(
@@ -126,9 +143,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              const Text(
-                                'Green Valley Apartments, Block A',
-                                style: TextStyle(
+                              Text(
+                                CurrentUser.societyName ?? 'Your Society',
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
@@ -477,7 +494,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               bgColor: const Color(0xFFEFF6FF),
               title: 'Generate Monthly Bills',
               subtitle: 'Create and submit bills for review',
-              onTap: () => context.push(AppRoutes.secretaryMaintenance),
+              onTap: () => context.push('/bill-generation'),
             ),
             const SizedBox(height: 10),
           ],

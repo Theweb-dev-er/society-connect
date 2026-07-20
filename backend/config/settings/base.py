@@ -7,6 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -215,6 +216,10 @@ CELERY_BEAT_SCHEDULE = {
     "clear-expired-cache-daily": {
         "task": "apps.core.tasks.clear_expired_cache",
         "schedule": 86400.0,  # 24 hours
+    },
+    "auto-generate-monthly-bills": {
+        "task": "apps.billing.tasks.auto_generate_monthly_bills",
+        "schedule": crontab(day_of_month=1, hour=0, minute=0),  # 1st of every month at midnight
     },
 }
 

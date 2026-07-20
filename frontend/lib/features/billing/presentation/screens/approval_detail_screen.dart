@@ -495,32 +495,78 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
 
   Widget _buildBillDetails(Map<String, dynamic> payload) {
     final entries = (payload['entries'] as List? ?? []).cast<Map<String, dynamic>>();
+    final billPeriod = payload['bill_period'] as Map<String, dynamic>?;
+    final month = billPeriod?['month'] ?? payload['month'];
+    final year = billPeriod?['year'] ?? payload['year'];
+    final residentCount = payload['resident_count'] ?? payload['residentCount'];
+    final totalAmount = payload['total_amount'] ?? payload['totalAmount'];
+    final categories = (payload['categories'] as List? ?? []).cast<Map<String, dynamic>>();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDetailRow('Billing Month', '${payload['month']} ${payload['year']}'),
-        _buildDetailRow('Total Residents', '${payload['residentCount']}'),
-        _buildDetailRow('Total Amount', 'Rs.${payload['totalAmount']}'),
+        _buildDetailRow('Billing Month', '$month $year'),
+        _buildDetailRow('Total Residents', '$residentCount'),
+        _buildDetailRow('Total Amount', 'Rs.${totalAmount}'),
+        if (categories.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text('Category Breakdown', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
+          const SizedBox(height: 8),
+          ...categories.map((cat) {
+            final catRates = (cat['rates'] as Map<String, dynamic>?) ?? {};
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(cat['category_name'] as String? ?? 'Unknown', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1F2937))),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 12,
+                    children: catRates.entries.map((e) => Text('${e.key}: Rs.${e.value}', style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)))).toList(),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
         const SizedBox(height: 12),
         const Text('Sample Entries', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
         const SizedBox(height: 8),
-        ...entries.take(3).map((e) => Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10)),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(color: Color(0xFFDBEAFE), shape: BoxShape.circle),
-                child: Text(e['flat'] as String, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
-              ),
-              const SizedBox(width: 10),
-              Expanded(child: Text(e['residentName'] as String, style: const TextStyle(fontSize: 13, color: Color(0xFF374151)))),
-              Text('Rs.${e['amount']}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1F2937))),
-            ],
-          ),
-        )),
+        ...entries.take(3).map((e) {
+          final categoryAmounts = e['categoryAmounts'] as Map<String, dynamic>?;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(color: Color(0xFFDBEAFE), shape: BoxShape.circle),
+                      child: Text(e['flat'] as String? ?? '-', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(e['residentName'] as String? ?? 'Unknown', style: const TextStyle(fontSize: 13, color: Color(0xFF374151)))),
+                    Text('Rs.${e['total'] ?? e['amount']}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1F2937))),
+                  ],
+                ),
+                if (categoryAmounts != null) ...[
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 8,
+                    children: categoryAmounts.entries.map((c) => Text('${c.key}: Rs.${c.value}', style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)))).toList(),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
       ],
     );
   }

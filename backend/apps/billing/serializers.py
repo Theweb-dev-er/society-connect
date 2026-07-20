@@ -4,7 +4,7 @@ Billing serializers.
 
 from rest_framework import serializers
 
-from .models import WorkflowItem
+from .models import WorkflowItem, BillCategory, BillTemplate
 
 
 class WorkflowItemSerializer(serializers.ModelSerializer):
@@ -56,3 +56,17 @@ class WorkflowActionSerializer(serializers.Serializer):
         choices=["submit", "check", "approve", "reject"]
     )
     comment = serializers.CharField(required=False, allow_blank=True)
+
+
+class BillCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BillCategory
+        fields = ["id", "society", "name", "description", "is_active", "order", "created_at"]
+        read_only_fields = ["id", "created_at", "society"]
+
+
+class BillTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BillTemplate
+        fields = ["id", "society", "rates", "is_recurring", "created_at", "updated_at"]
+        read_only_fields = ["id", "society", "created_at", "updated_at"]

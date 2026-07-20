@@ -44,6 +44,7 @@ def create_society():
             "dual_role_policy": True,
             "account_balance": 150000.00,
             "subscription_tier": "premium",
+            "wings": ["Wing A", "Wing B", "Wing C"],
         },
     )
     return society

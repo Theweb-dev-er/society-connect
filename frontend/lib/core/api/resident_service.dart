@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
 import 'api_client.dart';
 
 class ResidentService {
@@ -38,6 +39,28 @@ class ResidentService {
       'to_resident_id': toResidentId,
       'reason': reason,
     });
+    return response.data;
+  }
+
+  Future<dynamic> addResidentManually(String name, String phone, String wing, String flatNo, bool isOwner, {String? bhkType}) async {
+    final response = await _dio.post('/residents/admin-add/', data: {
+      'name': name,
+      'phone': phone,
+      'wing': wing,
+      'flat_no': flatNo,
+      'is_owner': isOwner,
+      if (bhkType != null && bhkType.isNotEmpty) 'bhk_type': bhkType,
+    });
+    return response.data;
+  }
+
+  Future<dynamic> importResidentsCSV(PlatformFile file) async {
+    final formData = FormData.fromMap({
+      'file': file.bytes != null
+          ? MultipartFile.fromBytes(file.bytes!, filename: file.name)
+          : await MultipartFile.fromFile(file.path!, filename: file.name),
+    });
+    final response = await _dio.post('/residents/admin-import/', data: formData);
     return response.data;
   }
 }

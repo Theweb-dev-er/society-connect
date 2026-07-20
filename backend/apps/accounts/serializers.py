@@ -10,6 +10,7 @@ from .models import DeviceToken, User
 class UserSerializer(serializers.ModelSerializer):
     society_code = serializers.CharField(source="society.code", read_only=True)
     society_name = serializers.CharField(source="society.name", read_only=True)
+    society_bhk_types = serializers.JSONField(source="society.bhk_types", read_only=True)
 
     class Meta:
         model = User
@@ -21,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
             "society",
             "society_code",
             "society_name",
+            "society_bhk_types",
             "role",
             "is_admin",
             "is_maker",
@@ -41,7 +43,10 @@ class MeSerializer(serializers.ModelSerializer):
 
     society_code = serializers.CharField(source="society.code", read_only=True)
     society_name = serializers.CharField(source="society.name", read_only=True)
+    society_wings = serializers.JSONField(source="society.wings", read_only=True)
+    society_bhk_types = serializers.JSONField(source="society.bhk_types", read_only=True)
     flat_no = serializers.SerializerMethodField()
+    wing = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
 
     class Meta:
@@ -54,6 +59,8 @@ class MeSerializer(serializers.ModelSerializer):
             "role",
             "society_code",
             "society_name",
+            "society_wings",
+            "society_bhk_types",
             "is_admin",
             "is_maker",
             "is_checker",
@@ -63,12 +70,32 @@ class MeSerializer(serializers.ModelSerializer):
             "guard_can_view_inside_list",
             "guard_can_view_gate_logs",
             "flat_no",
+            "wing",
             "is_owner",
+        ]
+        read_only_fields = [
+            "id",
+            "phone",
+            "role",
+            "is_admin",
+            "is_maker",
+            "is_checker",
+            "is_approver",
+            "guard_can_add_entry",
+            "guard_can_manage_pre_approved",
+            "guard_can_view_inside_list",
+            "guard_can_view_gate_logs",
         ]
 
     def get_flat_no(self, obj):
         try:
             return obj.resident_profile.flat_no
+        except AttributeError:
+            return None
+
+    def get_wing(self, obj):
+        try:
+            return obj.resident_profile.wing
         except AttributeError:
             return None
 

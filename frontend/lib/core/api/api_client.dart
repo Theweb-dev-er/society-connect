@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'auth_interceptor.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://localhost:8000';
+  static const String baseUrl = 'http://192.168.1.8:8000';
 
   late final Dio _dio;
 

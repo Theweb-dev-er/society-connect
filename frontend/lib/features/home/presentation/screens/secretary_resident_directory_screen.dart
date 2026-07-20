@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:society_app/core/api/auth_service.dart';
+import 'package:society_app/features/auth/data/models/current_user.dart';
 
 class SecretaryResidentDirectoryScreen extends StatefulWidget {
   const SecretaryResidentDirectoryScreen({super.key});
@@ -13,10 +15,41 @@ class _SecretaryResidentDirectoryScreenState extends State<SecretaryResidentDire
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  List<String> _wings = [];
+  String? _selectedWing;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSocietyWings();
+  }
+
+  Future<void> _fetchSocietyWings() async {
+    if (CurrentUser.societyCode == null) return;
+    try {
+      final society = await AuthService().fetchSocietyByCode(CurrentUser.societyCode!);
+      if (society != null && mounted) {
+        final rawWings = List<String>.from(society['wings'] ?? []);
+        final parsedWings = <String>[];
+        for (var w in rawWings) {
+          parsedWings.addAll(w.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty));
+        }
+        setState(() {
+          _wings = parsedWings.toSet().toList();
+          if (_wings.isNotEmpty) {
+            _selectedWing = _wings.first;
+          }
+        });
+      }
+    } catch (_) {
+      // Ignore error
+    }
+  }
+
   final List<Map<String, dynamic>> _allResidents = [
     {
       'name': 'Aman Gupta',
-      'flat': 'Flat 402 - Block A',
+      'flat': 'Flat 402 - Wing A',
       'phone': '+91 98765 43210',
       'role': 'Owner',
       'avatarColor': const Color(0xFFDBEAFE),
@@ -24,7 +57,7 @@ class _SecretaryResidentDirectoryScreenState extends State<SecretaryResidentDire
     },
     {
       'name': 'Rajesh Kumar',
-      'flat': 'Flat 304 - Block A',
+      'flat': 'Flat 304 - Wing A',
       'phone': '+91 99887 76655',
       'role': 'Tenant',
       'avatarColor': const Color(0xFFFEF3C7),
@@ -32,7 +65,7 @@ class _SecretaryResidentDirectoryScreenState extends State<SecretaryResidentDire
     },
     {
       'name': 'Rohan Mehta',
-      'flat': 'Flat 105 - Block B',
+      'flat': 'Flat 105 - Wing B',
       'phone': '+91 88776 65544',
       'role': 'Owner',
       'avatarColor': const Color(0xFFD1FAE5),
@@ -40,7 +73,7 @@ class _SecretaryResidentDirectoryScreenState extends State<SecretaryResidentDire
     },
     {
       'name': 'Priya Sharma',
-      'flat': 'Flat 202 - Block B',
+      'flat': 'Flat 202 - Wing B',
       'phone': '+91 77665 54433',
       'role': 'Tenant',
       'avatarColor': const Color(0xFFFCE7F3),
@@ -263,121 +296,160 @@ class _SecretaryResidentDirectoryScreenState extends State<SecretaryResidentDire
   }
 
   void _showAddResidentSheet(BuildContext context) {
+    String? localSelectedWing = _selectedWing;
+    String localSelectedRole = 'Owner';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       constraints: const BoxConstraints(maxWidth: 460),
       builder: (context) {
-        return Container(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-          ),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Add New Resident',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                _buildLabel('Full Name'),
-                _buildTextField('e.g., Jane Doe'),
-                const SizedBox(height: 16),
-                
-                _buildLabel('Phone Number'),
-                _buildTextField('+91 xxxxx xxxxx', isPhone: true),
-                const SizedBox(height: 16),
-                
-                Row(
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Block'),
-                          _buildTextField('e.g., A'),
-                        ],
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E7EB),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Flat Number'),
-                          _buildTextField('e.g., 402'),
-                        ],
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Add New Resident',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1F2937),
                       ),
                     ),
+                    const SizedBox(height: 24),
+                    
+                    _buildLabel('Full Name'),
+                    _buildTextField('e.g., Jane Doe'),
+                    const SizedBox(height: 16),
+                    
+                    _buildLabel('Phone Number'),
+                    _buildTextField('+91 xxxxx xxxxx', isPhone: true),
+                    const SizedBox(height: 16),
+                    
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel('Wing'),
+                              _wings.isNotEmpty
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF9FAFB),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: _wings.contains(localSelectedWing) ? localSelectedWing : _wings.first,
+                                          isExpanded: true,
+                                          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF9CA3AF)),
+                                          items: _wings
+                                              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                                              .toList(),
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              setSheetState(() {
+                                                localSelectedWing = val;
+                                              });
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    )
+                                  : _buildTextField('e.g., Wing A'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel('Flat Number'),
+                              _buildTextField('e.g., 402'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    _buildLabel('Role'),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: localSelectedRole,
+                          isExpanded: true,
+                          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF9CA3AF)),
+                          items: ['Owner', 'Tenant']
+                              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setSheetState(() {
+                                localSelectedRole = val;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () => context.pop(),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Add Resident', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
-                const SizedBox(height: 16),
-                
-                _buildLabel('Role'),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: 'Owner',
-                      isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF9CA3AF)),
-                      items: ['Owner', 'Tenant']
-                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                          .toList(),
-                      onChanged: (val) {},
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => context.pop(),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Add Resident', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );

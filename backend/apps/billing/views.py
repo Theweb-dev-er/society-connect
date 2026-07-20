@@ -10,11 +10,13 @@ from rest_framework.response import Response
 from apps.accounts.permissions import IsAdmin, IsApprover, IsChecker, IsMaker
 from apps.core.pagination import CursorPagination
 
-from .models import WorkflowItem
+from .models import WorkflowItem, BillCategory, BillTemplate
 from .serializers import (
     WorkflowActionSerializer,
     WorkflowItemCreateSerializer,
     WorkflowItemSerializer,
+    BillCategorySerializer,
+    BillTemplateSerializer,
 )
 
 
@@ -155,3 +157,52 @@ class WorkflowActionView(generics.GenericAPIView):
             WorkflowItemSerializer(item).data,
             status=status.HTTP_200_OK,
         )
+
+
+class BillCategoryListCreateView(generics.ListCreateAPIView):
+    """List or create billing categories for the current society."""
+
+    serializer_class = BillCategorySerializer
+    pagination_class = CursorPagination
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsMaker()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        return BillCategory.objects.filter(society=self.request.user.society)
+
+    def perform_create(self, serializer):
+        serializer.save(society=self.request.user.society)
+
+
+class BillCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, or delete a billing category."""
+
+    serializer_class = BillCategorySerializer
+
+    def get_permissions(self):
+        if self.request.method in ("PUT", "PATCH", "DELETE"):
+            return [IsMaker()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        return BillCategory.objects.filter(society=self.request.user.society)
+
+
+class BillTemplateView(generics.RetrieveUpdateAPIView):
+    """Retrieve or update the bill template for the current society."""
+
+    serializer_class = BillTemplateSerializer
+    permission_classes = [IsMaker]
+
+    def get_object(self):
+        template, created = BillTemplate.objects.get_or_create(
+            society=self.request.user.society,
+            defaults={"rates": {}, "is_recurring": False}
+        )
+        return template
+
+    def perform_update(self, serializer):
+        serializer.save(society=self.request.user.society)

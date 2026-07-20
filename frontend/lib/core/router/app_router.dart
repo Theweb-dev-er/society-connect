@@ -7,6 +7,7 @@ import '../../features/auth/data/models/current_user.dart';
 import '../../features/auth/presentation/screens/login_page.dart';
 import '../../features/auth/presentation/screens/register_page.dart';
 import '../../features/auth/presentation/screens/otp_verification_page.dart';
+import '../../features/auth/presentation/screens/complete_profile_screen.dart';
 import '../../features/home/presentation/screens/dashboard_screen.dart';
 import '../../features/home/presentation/screens/maintenance_screen.dart';
 import '../../features/home/presentation/screens/visitor_verification_screen.dart';
@@ -36,9 +37,13 @@ import '../../features/billing/presentation/screens/pending_approvals_screen.dar
 import '../../features/billing/presentation/screens/approval_detail_screen.dart';
 import '../../features/billing/presentation/screens/expense_entry_screen.dart';
 import '../../features/billing/presentation/screens/audit_log_screen.dart';
+import '../../features/billing/presentation/screens/manage_billing_categories_screen.dart';
+import '../../features/billing/presentation/screens/bill_generation_screen.dart';
 import '../../features/auth/presentation/screens/manage_residents_screen.dart';
 import '../../features/auth/presentation/screens/manage_security_guards_screen.dart';
 import '../../features/subscription/presentation/screens/subscribe_screen.dart';
+import '../../features/home/presentation/screens/family_members_screen.dart';
+import '../../features/home/presentation/screens/vehicles_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -49,6 +54,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     AppRoutes.login,
     AppRoutes.register,
     AppRoutes.otpVerification,
+    AppRoutes.subscribe,
   };
 
   return GoRouter(
@@ -93,8 +99,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             societyId: extra['societyId'] as String?,
             societyName: extra['societyName'] as String?,
             societyCode: extra['societyCode'] as String?,
+            flatNo: extra['flatNo'] as String?,
+            wing: extra['wing'] as String?,
           );
         },
+      ),
+      GoRoute(
+        path: AppRoutes.completeProfile,
+        builder: (context, state) => const CompleteProfileScreen(),
       ),
       GoRoute(
         path: AppRoutes.dashboard,
@@ -229,8 +241,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ManageSecurityGuardsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.manageBillingCategories,
+        builder: (context, state) => const ManageBillingCategoriesScreen(),
+      ),
+      GoRoute(
+        path: '/bill-generation',
+        builder: (context, state) => const BillGenerationScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.subscribe,
         builder: (context, state) => const SubscribeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.familyMembers,
+        builder: (context, state) => const FamilyMembersScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.vehicles,
+        builder: (context, state) => const VehiclesScreen(),
       ),
     ],
   );

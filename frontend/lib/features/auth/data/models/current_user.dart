@@ -3,6 +3,7 @@ class CurrentUser {
   static String role = 'resident';
   static String phone = '';
   static String email = '';
+  static String? wing;
   static String? flatNo;
   static bool isOwner = false;
   static bool isAdmin = false;
@@ -19,6 +20,8 @@ class CurrentUser {
   static String? societyId;
   static String? societyName;
   static String? societyCode;
+  static List<String>? societyWings;
+  static List<String>? societyBhkTypes;
   static String? accessToken;
   static String? refreshToken;
 
@@ -27,6 +30,7 @@ class CurrentUser {
     required String role,
     String phone = '',
     String email = '',
+    String? wing,
     String? flatNo,
     bool owner = false,
     bool admin = false,
@@ -42,6 +46,8 @@ class CurrentUser {
     String? societyId,
     String? societyName,
     String? societyCode,
+    List<String>? societyWings,
+    List<String>? societyBhkTypes,
     String? accessToken,
     String? refreshToken,
   }) {
@@ -49,6 +55,7 @@ class CurrentUser {
     CurrentUser.role = role;
     CurrentUser.phone = phone;
     CurrentUser.email = email;
+    CurrentUser.wing = wing;
     CurrentUser.flatNo = flatNo;
     isOwner = owner;
     isAdmin = admin;
@@ -64,6 +71,8 @@ class CurrentUser {
     CurrentUser.societyId = societyId;
     CurrentUser.societyName = societyName;
     CurrentUser.societyCode = societyCode;
+    CurrentUser.societyWings = societyWings;
+    CurrentUser.societyBhkTypes = societyBhkTypes;
     CurrentUser.accessToken = accessToken;
     CurrentUser.refreshToken = refreshToken;
   }
@@ -73,6 +82,7 @@ class CurrentUser {
     role = 'resident';
     phone = '';
     email = '';
+    wing = null;
     flatNo = null;
     isOwner = false;
     isAdmin = false;
@@ -88,6 +98,8 @@ class CurrentUser {
     societyId = null;
     societyName = null;
     societyCode = null;
+    societyWings = null;
+    societyBhkTypes = null;
     accessToken = null;
     refreshToken = null;
   }

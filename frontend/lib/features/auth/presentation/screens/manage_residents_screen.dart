@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../../core/api/api_providers.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../data/models/current_user.dart';
@@ -426,6 +430,41 @@ class _ManageResidentsScreenState extends ConsumerState<ManageResidentsScreen> {
               style: TextStyle(color: Color(0xFF1F2937), fontSize: 18, fontWeight: FontWeight.w600),
             ),
             centerTitle: false,
+            actions: [
+              if (CurrentUser.role == 'admin' || CurrentUser.isAdmin)
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.add, color: Color(0xFF3B82F6)),
+                  onSelected: (value) {
+                    if (value == 'manual') {
+                      _showManualAddSheet();
+                    } else if (value == 'csv') {
+                      _importCSV();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'manual',
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_add_alt, size: 20, color: Color(0xFF374151)),
+                          SizedBox(width: 8),
+                          Text('Add Manually'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'csv',
+                      child: Row(
+                        children: [
+                          Icon(Icons.upload_file, size: 20, color: Color(0xFF374151)),
+                          SizedBox(width: 8),
+                          Text('Import CSV'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+            ],
           ),
           body: Column(
             children: [
@@ -680,5 +719,263 @@ class _ManageResidentsScreenState extends ConsumerState<ManageResidentsScreen> {
       decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
       child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: textColor)),
     );
+  }
+
+  void _showManualAddSheet() {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final wingController = TextEditingController();
+    final flatNoController = TextEditingController();
+    
+    final wings = CurrentUser.societyWings ?? [];
+    String? selectedWing = wings.isNotEmpty ? wings.first : null;
+    final bhkOptions = (CurrentUser.societyBhkTypes?.isNotEmpty ?? false)
+        ? CurrentUser.societyBhkTypes!
+        : ['1RK', '1BHK', '2BHK', '3BHK', '4BHK', '5BHK', '6BHK'];
+    String? selectedBhk = bhkOptions.isNotEmpty ? bhkOptions.first : '2BHK';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Add Resident Manually', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+                const SizedBox(height: 24),
+                _buildTextField('Full Name', nameController),
+                const SizedBox(height: 16),
+                _buildTextField('Phone Number (10 digits)', phoneController, keyboardType: TextInputType.phone, maxLength: 10),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: wings.isNotEmpty
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Wing', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF9FAFB),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: selectedWing,
+                                      isExpanded: true,
+                                      items: wings.map((w) => DropdownMenuItem(value: w, child: Text(w))).toList(),
+                                      onChanged: (v) => setSheetState(() => selectedWing = v),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : _buildTextField('Wing (e.g. A)', wingController),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildTextField('Flat No (e.g. 101)', flatNoController)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Flat Type (BHK)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedBhk,
+                          isExpanded: true,
+                          items: bhkOptions
+                              .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                              .toList(),
+                          onChanged: (v) => setSheetState(() => selectedBhk = v),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: FilledButton(
+                    onPressed: () async {
+                      final wingValue = wings.isNotEmpty ? selectedWing : wingController.text;
+                      if (nameController.text.isEmpty || phoneController.text.isEmpty || (wingValue == null || wingValue.isEmpty) || flatNoController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All fields are required')));
+                        return;
+                      }
+                      Navigator.pop(context);
+                      setState(() => _isLoading = true);
+                      try {
+                        final service = ref.read(residentServiceProvider);
+                        await service.addResidentManually(
+                          nameController.text.trim(),
+                          phoneController.text.trim(),
+                          wingValue!.trim(),
+                          flatNoController.text.trim(),
+                          true, // Automatically set as owner
+                          bhkType: selectedBhk,
+                        );
+                        _loadResidents();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Resident added successfully!')));
+                        }
+                      } catch (e) {
+                        setState(() => _isLoading = false);
+                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                      }
+                    },
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    child: const Text('Add Resident'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, {TextInputType? keyboardType, int? maxLength}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLength: maxLength,
+          decoration: InputDecoration(
+            counterText: '',
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _importCSV() async {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import Residents (CSV)'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Your CSV file must include exactly these columns in order:'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.grey[100],
+              child: const Text('Name, Phone, Wing, Flat Number, Is Owner, BHK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            ),
+            const SizedBox(height: 8),
+            const Text('Example:'),
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.grey[100],
+              child: const Text('John Doe, 9876543210, Wing A, 101, Yes, 2BHK\nJane Smith, 9876543211, Liberty, 204, Yes, 3BHK', style: TextStyle(fontFamily: 'monospace', fontSize: 12)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              try {
+                final csvData = "Name, Phone, Wing, Flat Number, Is Owner, BHK\nJohn Doe, 9876543210, Wing A, 101, Yes, 2BHK\nJane Smith, 9876543211, Liberty, 204, Yes, 3BHK";
+                final bytes = Uint8List.fromList(utf8.encode(csvData));
+                await FilePicker.saveFile(
+                  dialogTitle: 'Save CSV Template',
+                  fileName: 'resident_import_template.csv',
+                  type: FileType.custom,
+                  allowedExtensions: ['csv'],
+                  bytes: bytes,
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Template downloaded successfully!')));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: $e')));
+                }
+              }
+            },
+            child: const Text('Download Template'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _pickAndUploadCSV();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), foregroundColor: Colors.white),
+            child: const Text('Choose File'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadCSV() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      setState(() => _isLoading = true);
+      final file = result.files.first;
+      
+      final service = ref.read(residentServiceProvider);
+      final response = await service.importResidentsCSV(file);
+      
+      _loadResidents();
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Import Complete'),
+            content: Text('${response['detail']}\n\nErrors:\n${(response['errors'] as List).join('\n')}'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Import Failed: $e'), backgroundColor: Colors.red));
+      }
+    }
   }
 }
