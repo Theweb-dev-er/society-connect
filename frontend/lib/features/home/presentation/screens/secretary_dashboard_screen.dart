@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:society_app/core/router/app_routes.dart';
+import 'package:society_app/features/auth/data/models/current_user.dart';
 
 class SecretaryDashboardScreen extends StatelessWidget {
   const SecretaryDashboardScreen({super.key});
@@ -37,10 +38,10 @@ class SecretaryDashboardScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Column(
+                          Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Secretary Workspace',
                                 style: TextStyle(
                                   color: Colors.white70,
@@ -48,13 +49,30 @@ class SecretaryDashboardScreen extends StatelessWidget {
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Text(
-                                'Welcome, Raj',
-                                style: TextStyle(
+                                'Welcome, ${CurrentUser.name.isNotEmpty ? CurrentUser.name : 'Secretary'}',
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  CurrentUser.role.toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 1,
+                                  ),
                                 ),
                               ),
                             ],
@@ -74,14 +92,14 @@ class SecretaryDashboardScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.white.withOpacity(0.2)),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.apartment, color: Colors.white),
-                            SizedBox(width: 12),
+                            const Icon(Icons.apartment, color: Colors.white),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Green Valley Apartments',
-                                style: TextStyle(
+                                CurrentUser.societyName ?? 'Your Society',
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,

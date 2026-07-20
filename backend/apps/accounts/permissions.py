@@ -49,6 +49,17 @@ class IsApprover(permissions.BasePermission):
         )
 
 
+class IsAdminOrMaker(permissions.BasePermission):
+    """Allow access to society admins or makers."""
+
+    def has_permission(self, request, view):
+        return (
+            request.user
+            and request.user.is_authenticated
+            and (request.user.is_admin or request.user.is_maker)
+        )
+
+
 class IsSecurityGuard(permissions.BasePermission):
     """Allow access only to security guards."""
 

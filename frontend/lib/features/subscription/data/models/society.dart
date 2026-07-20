@@ -13,6 +13,8 @@ class Society {
   final String? subscriptionId;
   final DateTime createdAt;
   final DualRolePolicy dualRolePolicy;
+  final List<String> wings;
+  final List<String> bhkTypes;
 
   Society({
     required this.id,
@@ -24,6 +26,8 @@ class Society {
     this.subscriptionId,
     required this.createdAt,
     this.dualRolePolicy = DualRolePolicy.adminPlusOne,
+    this.wings = const [],
+    this.bhkTypes = const [],
   });
 }
 

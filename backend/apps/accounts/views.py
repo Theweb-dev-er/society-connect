@@ -84,7 +84,7 @@ class OTPVerifyView(APIView):
         )
 
 
-class MeView(generics.RetrieveAPIView):
+class MeView(generics.RetrieveUpdateAPIView):
     """Current authenticated user profile."""
 
     serializer_class = MeSerializer

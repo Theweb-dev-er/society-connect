@@ -2,6 +2,7 @@ class AppRoutes {
   static const String splash = '/splash';
   static const String login = '/login';
   static const String register = '/register';
+  static const String completeProfile = '/complete-profile';
   static const String otpVerification = '/otp-verification';
   static const String dashboard = '/dashboard';
   static const String securityDashboard = '/security-dashboard';
@@ -35,7 +36,12 @@ class AppRoutes {
   // Admin Routes
   static const String manageResidents = '/manage-residents';
   static const String manageSecurityGuards = '/manage-security-guards';
+  static const String manageBillingCategories = '/manage-billing-categories';
 
   // Subscription
   static const String subscribe = '/subscribe';
+  
+  // Profile Additions
+  static const String familyMembers = '/family-members';
+  static const String vehicles = '/vehicles';
 }

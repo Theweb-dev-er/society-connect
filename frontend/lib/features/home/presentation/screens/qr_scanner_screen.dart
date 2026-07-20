@@ -106,7 +106,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             ),
             const SizedBox(height: 16),
             const Text('Role: Expected Guest'),
-            const Text('Flat: 402 - Block A'),
+            const Text('Flat: 402 - Wing A'),
           ],
         ),
         actions: [

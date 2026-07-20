@@ -61,7 +61,7 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                     const SizedBox(height: 16),
                     _buildComplaintCard(
                       title: 'Elevator Not Working',
-                      description: 'Block A elevator is stuck on the 3rd floor.',
+                      description: 'Wing A elevator is stuck on the 3rd floor.',
                       date: 'June 20, 2026',
                       status: 'In Progress',
                       ticketId: '#CMP1018',

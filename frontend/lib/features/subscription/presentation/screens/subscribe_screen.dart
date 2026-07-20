@@ -3,10 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:society_app/core/router/app_routes.dart';
 import '../../data/models/society.dart';
-import '../../data/repository/mock_society_repository.dart';
 import '../../../auth/data/models/current_user.dart';
-import '../../../auth/data/models/resident.dart';
-import '../../../auth/data/repository/mock_resident_repository.dart';
+import '../../data/repository/society_service.dart';
+import '../../../../core/api/auth_service.dart';
 
 class SubscribeScreen extends StatefulWidget {
   const SubscribeScreen({super.key});
@@ -26,9 +25,17 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
   final _ownerMobileController = TextEditingController();
   final _ownerEmailController = TextEditingController();
   final _detailsFormKey = GlobalKey<FormState>();
+  final List<String> _wings = ['Wing A'];
+  final _wingInputController = TextEditingController();
+  bool _hasMultipleWings = true;
+  final List<String> _selectedBhkTypes = ['1BHK', '2BHK', '3BHK'];
+  final _bhkInputController = TextEditingController();
 
   // Step 1 - plan selection
   SubscriptionPlan _selectedPlan = SubscriptionPlan.all[1]; // growth default
+
+  // Step 0 - checking phone
+  bool _checkingPhone = false;
 
   // Step 2 - payment mock
   bool _processingPayment = false;
@@ -41,15 +48,114 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
     _societyNameController.dispose();
     _addressController.dispose();
     _flatsController.dispose();
+    _wingInputController.dispose();
+    _bhkInputController.dispose();
     _ownerNameController.dispose();
     _ownerMobileController.dispose();
     _ownerEmailController.dispose();
     super.dispose();
   }
 
-  void _next() {
+  void _addWing() {
+    final text = _wingInputController.text.trim();
+    if (text.isNotEmpty) {
+      final parts = text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty);
+      setState(() {
+        for (var part in parts) {
+          if (!_wings.contains(part)) {
+            _wings.add(part);
+          }
+        }
+        _wingInputController.clear();
+      });
+    }
+  }
+
+  void _addBhkType() {
+    final text = _bhkInputController.text.trim().toUpperCase();
+    const validTypes = ['1RK', '1BHK', '2BHK', '3BHK', '4BHK', '5BHK', '6BHK'];
+    if (text.isNotEmpty) {
+      final parts = text.split(',').map((e) => e.trim().toUpperCase()).where((e) => e.isNotEmpty);
+      setState(() {
+        for (var part in parts) {
+          if (!validTypes.contains(part)) continue;
+          if (!_selectedBhkTypes.contains(part)) {
+            _selectedBhkTypes.add(part);
+          }
+        }
+        _bhkInputController.clear();
+      });
+    }
+  }
+
+  Future<void> _next() async {
     if (_step == 0) {
       if (!_detailsFormKey.currentState!.validate()) return;
+      
+      if (!_hasMultipleWings) {
+        _wings.clear();
+        _wings.add('Main');
+      } else {
+        // Auto-add any pending wing text
+        if (_wingInputController.text.trim().isNotEmpty) {
+          _addWing();
+        }
+
+        if (_wings.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please add at least one wing (e.g., Wing A).'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      }
+
+      // Auto-add any pending BHK text
+      if (_bhkInputController.text.trim().isNotEmpty) {
+        _addBhkType();
+      }
+
+      if (_selectedBhkTypes.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please add at least one BHK type (e.g., 2BHK).'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Check if phone number already exists
+      final phone = _ownerMobileController.text.trim();
+      setState(() => _checkingPhone = true);
+      try {
+        final exists = await SocietyService().checkPhoneExists(phone);
+        if (!mounted) return;
+        if (exists) {
+          setState(() => _checkingPhone = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This phone number is already registered. Please use a different number.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _checkingPhone = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      setState(() => _checkingPhone = false);
+
       // Auto-select plan based on flats
       final flats = int.tryParse(_flatsController.text.trim()) ?? 0;
       _selectedPlan = SubscriptionPlan.all.firstWhere(
@@ -70,49 +176,78 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
 
   Future<void> _processPayment() async {
     setState(() => _processingPayment = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
 
-    // Create owner resident
-    final ownerId = 'R${DateTime.now().millisecondsSinceEpoch}';
-    final owner = Resident(
-      id: ownerId,
-      name: _ownerNameController.text.trim(),
-      flatNumber: 'OWNER',
-      block: '—',
-      mobile: _ownerMobileController.text.trim(),
-      email: _ownerEmailController.text.trim(),
-      isOwner: true,
-      isAdmin: true,
-    );
-    MockResidentRepository.addResident(owner);
+    try {
+      final data = {
+        'name': _societyNameController.text.trim(),
+        'address': _addressController.text.trim(),
+        'total_flats': int.tryParse(_flatsController.text.trim()) ?? 0,
+        'wings': _wings,
+        'bhk_types': _selectedBhkTypes,
+        'owner': {
+          'name': _ownerNameController.text.trim(),
+          'phone': _ownerMobileController.text.trim(),
+          'email': _ownerEmailController.text.trim(),
+        }
+      };
 
-    // Create society
-    final society = MockSocietyRepository.createSociety(
-      name: _societyNameController.text.trim(),
-      address: _addressController.text.trim(),
-      totalFlats: int.parse(_flatsController.text.trim()),
-      ownerId: ownerId,
-      planId: _selectedPlan.id,
-      amount: _selectedPlan.monthlyPrice,
-    );
+      final response = await SocietyService().registerSociety(data);
+      
+      // Update tokens
+      if (response.containsKey('access') && response.containsKey('refresh')) {
+        await AuthService().saveTokens(response['access'], response['refresh']);
+        CurrentUser.accessToken = response['access'];
+        CurrentUser.refreshToken = response['refresh'];
+      }
 
-    // Set current user as owner + admin
-    CurrentUser.setUser(
-      name: owner.name,
-      role: 'resident',
-      owner: true,
-      admin: true,
-      societyId: society.id,
-      societyName: society.name,
-      societyCode: society.code,
-    );
+      // Set current user
+      final user = response['user'];
+      CurrentUser.setUser(
+        name: user['name'],
+        role: user['role'],
+        phone: user['phone'],
+        owner: true,
+        admin: true,
+        maker: true,
+        checker: true,
+        approver: true,
+        societyId: user['society'],
+        societyName: user['society_name'],
+        societyCode: user['society_code'],
+        societyWings: List<String>.from(response['society']['wings'] ?? []),
+        societyBhkTypes: List<String>.from(response['society']['bhk_types'] ?? []),
+        accessToken: response['access'],
+        refreshToken: response['refresh'],
+      );
 
-    setState(() {
-      _processingPayment = false;
-      _createdSociety = society;
-      _step = 3;
-    });
+      final societyModel = Society(
+        id: response['society']['id'],
+        name: response['society']['name'],
+        code: response['society']['code'],
+        address: response['society']['address'] ?? '',
+        totalFlats: response['society']['total_flats'] ?? 0,
+        ownerId: user['id'],
+        createdAt: DateTime.parse(response['society']['created_at']),
+        wings: List<String>.from(response['society']['wings'] ?? []),
+        bhkTypes: List<String>.from(response['society']['bhk_types'] ?? []),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _processingPayment = false;
+        _createdSociety = societyModel;
+        _step = 3;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _processingPayment = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -248,6 +383,121 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
               if (n == null || n <= 0) return 'Enter a valid number';
               return null;
             }, keyboardType: TextInputType.number, formatters: [FilteringTextInputFormatter.digitsOnly]),
+            const SizedBox(height: 14),
+            
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: SwitchListTile(
+                title: const Text('Does this society have multiple wings?',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF1F2937))),
+                value: _hasMultipleWings,
+                activeColor: const Color(0xFF3B82F6),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                onChanged: (val) => setState(() => _hasMultipleWings = val),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            if (_hasMultipleWings) ...[
+              _label('Wings (Required)'),
+              TextFormField(
+                controller: _wingInputController,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937)),
+                textInputAction: TextInputAction.go,
+                decoration: InputDecoration(
+                  hintText: 'e.g. Wing A, Wing B',
+                  hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+                  prefixIcon: const Icon(Icons.grid_view_outlined, size: 19, color: Color(0xFF9CA3AF)),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.add_circle, color: Color(0xFF3B82F6), size: 22),
+                    onPressed: _addWing,
+                    tooltip: 'Add wing',
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5)),
+                ),
+                onFieldSubmitted: (v) => _addWing(),
+              ),
+              const SizedBox(height: 4),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  'Press Enter / Return on your keyboard to add the wing to the list.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+                ),
+              ),
+              if (_wings.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _wings.map((wing) => Chip(
+                    label: Text(wing, style: const TextStyle(fontSize: 12, color: Color(0xFF1F2937), fontWeight: FontWeight.w500)),
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    side: const BorderSide(color: Color(0xFFDBEAFE)),
+                    deleteIcon: const Icon(Icons.close, size: 14, color: Color(0xFFef4444)),
+                    onDeleted: () => setState(() => _wings.remove(wing)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  )).toList(),
+                ),
+              ],
+              const SizedBox(height: 24),
+            ],
+
+            _label('BHK Types (Required)'),
+            TextFormField(
+              controller: _bhkInputController,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937)),
+              textInputAction: TextInputAction.go,
+              decoration: InputDecoration(
+                hintText: 'e.g. 2BHK, 3BHK',
+                hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+                prefixIcon: const Icon(Icons.bed_outlined, size: 19, color: Color(0xFF9CA3AF)),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.add_circle, color: Color(0xFF3B82F6), size: 22),
+                  onPressed: _addBhkType,
+                  tooltip: 'Add BHK type',
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5)),
+              ),
+              onFieldSubmitted: (v) => _addBhkType(),
+            ),
+            const SizedBox(height: 4),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                'Press Enter to add. Valid: 1RK, 1BHK, 2BHK, 3BHK, 4BHK, 5BHK, 6BHK',
+                style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+              ),
+            ),
+            if (_selectedBhkTypes.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _selectedBhkTypes.map((bhk) => Chip(
+                  label: Text(bhk, style: const TextStyle(fontSize: 12, color: Color(0xFF1F2937), fontWeight: FontWeight.w500)),
+                  backgroundColor: const Color(0xFFEFF6FF),
+                  side: const BorderSide(color: Color(0xFFDBEAFE)),
+                  deleteIcon: const Icon(Icons.close, size: 14, color: Color(0xFFef4444)),
+                  onDeleted: () => setState(() => _selectedBhkTypes.remove(bhk)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                )).toList(),
+              ),
+            ],
             const SizedBox(height: 24),
 
             const Text('Your Details (Owner & Admin)',
@@ -275,7 +525,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
             }, keyboardType: TextInputType.emailAddress),
             const SizedBox(height: 24),
 
-            _primaryButton('Continue', _next),
+            _primaryButton('Continue', _checkingPhone ? null : _next, loading: _checkingPhone),
             const SizedBox(height: 24),
           ],
         ),
@@ -520,7 +770,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
           ),
           const SizedBox(height: 24),
 
-          _primaryButton('Go to Admin Dashboard', () => context.go(AppRoutes.dashboard)),
+          _primaryButton('Complete Your Profile', () => context.go(AppRoutes.completeProfile)),
           const SizedBox(height: 24),
         ],
       ),

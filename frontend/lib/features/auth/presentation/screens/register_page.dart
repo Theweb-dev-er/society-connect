@@ -2,32 +2,81 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:society_app/core/router/app_routes.dart';
-import '../../../subscription/data/repository/mock_society_repository.dart';
+import 'package:society_app/core/api/api_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class RegisterPage extends StatefulWidget {
+class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _societyCodeController = TextEditingController();
   final _nameController = TextEditingController();
   final _flatController = TextEditingController();
-  final _blockController = TextEditingController();
+  final _wingController = TextEditingController();
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   bool _agreedToTerms = false;
   bool _isLoading = false;
+  bool _isValidatingCode = false;
+  Map<String, dynamic>? _detectedSociety;
+
+  @override
+  void initState() {
+    super.initState();
+    _societyCodeController.addListener(_onSocietyCodeChanged);
+  }
+
+  void _onSocietyCodeChanged() async {
+    final code = _societyCodeController.text.trim();
+    if (code.length < 4) {
+      if (_detectedSociety != null) {
+        setState(() {
+          _detectedSociety = null;
+          _wingController.clear();
+        });
+      }
+      return;
+    }
+
+    setState(() => _isValidatingCode = true);
+    final authService = ref.read(authServiceProvider);
+    final society = await authService.fetchSocietyByCode(code);
+    
+    if (mounted) {
+      setState(() {
+        _isValidatingCode = false;
+        _detectedSociety = society;
+        if (society != null) {
+          final rawWings = List<String>.from(society['wings'] ?? []);
+          final parsedWings = <String>[];
+          for (var w in rawWings) {
+            parsedWings.addAll(w.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty));
+          }
+          final wings = parsedWings.toSet().toList();
+          _detectedSociety!['wings'] = wings;
+
+          if (wings.isNotEmpty) {
+            _wingController.text = wings.first;
+          } else {
+            _wingController.clear();
+          }
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
+    _societyCodeController.removeListener(_onSocietyCodeChanged);
     _societyCodeController.dispose();
     _nameController.dispose();
     _flatController.dispose();
-    _blockController.dispose();
+    _wingController.dispose();
     _mobileController.dispose();
     _emailController.dispose();
     super.dispose();
@@ -35,8 +84,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final society = MockSocietyRepository.findByCode(_societyCodeController.text.trim());
-    if (society == null) {
+    
+    if (_detectedSociety == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Invalid society code. Please check with your society admin.')),
       );
@@ -61,9 +110,11 @@ class _RegisterPageState extends State<RegisterPage> {
         'mobileNumber': _mobileController.text.trim(),
         'isRegistration': true,
         'userName': _nameController.text.trim(),
-        'societyId': society.id,
-        'societyName': society.name,
-        'societyCode': society.code,
+        'societyId': _detectedSociety!['id'],
+        'societyName': _detectedSociety!['name'],
+        'societyCode': _detectedSociety!['code'],
+        'flatNo': _flatController.text.trim(),
+        'wing': _wingController.text.trim(),
       },
     );
   }
@@ -145,14 +196,24 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      _buildLabel('Block / Building'),
-                      _buildTextField(
-                        controller: _blockController,
-                        hint: 'e.g. Block A',
-                        prefix: Icons.location_city_outlined,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Block is required' : null,
-                      ),
-                      const SizedBox(height: 16),
+                      if (_detectedSociety != null && (_detectedSociety!['wings'] as List).isNotEmpty) ...[
+                        _buildLabel('Wing'),
+                        _buildDropdownField(
+                          value: (_detectedSociety!['wings'] as List).contains(_wingController.text)
+                              ? _wingController.text
+                              : (_detectedSociety!['wings'] as List).first,
+                          items: List<String>.from(_detectedSociety!['wings']),
+                          prefix: Icons.location_city_outlined,
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _wingController.text = val;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
                       _buildLabel('Mobile Number'),
                       _buildTextField(
@@ -289,6 +350,34 @@ class _RegisterPageState extends State<RegisterPage> {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+        prefixIcon: Icon(prefix, size: 20, color: const Color(0xFF9CA3AF)),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5)),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFEF4444))),
+      ),
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String value,
+    required List<String> items,
+    required IconData prefix,
+    required void Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      items: items.map((item) {
+        return DropdownMenuItem<String>(
+          value: item,
+          child: Text(item, style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937))),
+        );
+      }).toList(),
+      onChanged: onChanged,
+      decoration: InputDecoration(
         prefixIcon: Icon(prefix, size: 20, color: const Color(0xFF9CA3AF)),
         filled: true,
         fillColor: Colors.white,

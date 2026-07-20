@@ -13,6 +13,7 @@ class MockSocietyRepository {
       subscriptionId: 'SUB001',
       createdAt: DateTime.now().subtract(const Duration(days: 90)),
       dualRolePolicy: DualRolePolicy.adminPlusOne,
+      wings: const ['Wing A', 'Wing B', 'Wing C'],
     ),
   ];
 
@@ -57,6 +58,7 @@ class MockSocietyRepository {
     required String ownerId,
     required String planId,
     required double amount,
+    List<String> wings = const [],
   }) {
     final societyId = 'SOC${_societies.length + 1}'.padLeft(6, '0');
     final subId = 'SUB${_subscriptions.length + 1}'.padLeft(6, '0');
@@ -83,6 +85,7 @@ class MockSocietyRepository {
       subscriptionId: subId,
       createdAt: DateTime.now(),
       dualRolePolicy: DualRolePolicy.adminPlusOne,
+      wings: wings,
     );
 
     _subscriptions.add(sub);
@@ -131,6 +134,7 @@ class MockSocietyRepository {
           subscriptionId: oldSociety.subscriptionId,
           createdAt: oldSociety.createdAt,
           dualRolePolicy: policy,
+          wings: oldSociety.wings,
         );
       }
     } catch (_) {

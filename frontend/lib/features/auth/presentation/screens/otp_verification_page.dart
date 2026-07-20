@@ -16,6 +16,8 @@ class OtpVerificationPage extends ConsumerStatefulWidget {
   final String? societyId;
   final String? societyName;
   final String? societyCode;
+  final String? flatNo;
+  final String? wing;
 
   const OtpVerificationPage({
     super.key,
@@ -26,6 +28,8 @@ class OtpVerificationPage extends ConsumerStatefulWidget {
     this.societyId,
     this.societyName,
     this.societyCode,
+    this.flatNo,
+    this.wing,
   });
 
   @override
@@ -78,15 +82,27 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
 
       if (isNewUser && widget.isRegistration) {
         // New registration flow
-        CurrentUser.setUser(
-          name: widget.userName ?? 'Resident',
-          role: 'resident',
-          societyId: widget.societyId,
-          societyName: widget.societyName,
-          societyCode: widget.societyCode,
-          accessToken: CurrentUser.accessToken,
-          refreshToken: CurrentUser.refreshToken,
-        );
+        final data = {
+          'flat_no': widget.flatNo,
+          'is_owner': false,
+          'name': widget.userName,
+        };
+        if (widget.wing != null && widget.wing!.isNotEmpty) {
+          data['wing'] = widget.wing;
+        }
+        if (widget.societyId != null) {
+          data['society_id'] = widget.societyId;
+        } else if (widget.societyCode != null) {
+          data['society_code'] = widget.societyCode;
+        }
+
+        try {
+          await authService.createResidentProfile(data);
+          await authService.fetchMe();
+        } catch (e) {
+          // Ignore, they can complete profile later
+        }
+
         NotificationService().initialize();
         context.go(AppRoutes.dashboard);
         return;
@@ -94,7 +110,11 @@ class _OtpVerificationPageState extends ConsumerState<OtpVerificationPage> {
 
       NotificationService().initialize();
 
-      // Route based on role
+      // Check if profile needs completion (no flatNo but not a guard)
+      if (CurrentUser.flatNo == null && role != 'security_guard') {
+        context.go(AppRoutes.completeProfile);
+        return;
+      }
       if (role == 'security_guard') {
         if (CurrentUser.guardCanAddEntry || CurrentUser.guardCanManagePreApproved ||
             CurrentUser.guardCanViewInsideList || CurrentUser.guardCanViewGateLogs) {

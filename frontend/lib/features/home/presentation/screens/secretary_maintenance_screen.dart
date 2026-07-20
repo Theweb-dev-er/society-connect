@@ -11,21 +11,21 @@ class SecretaryMaintenanceScreen extends StatefulWidget {
 class _SecretaryMaintenanceScreenState extends State<SecretaryMaintenanceScreen> {
   final List<Map<String, dynamic>> _outstandingDues = [
     {
-      'flat': 'Block A-402',
+      'flat': 'Wing A-402',
       'owner': 'Amit Kumar',
       'amount': '₹5,500',
       'dueDate': 'May 10, 2026',
       'months': '1 month due',
     },
     {
-      'flat': 'Block B-105',
+      'flat': 'Wing B-105',
       'owner': 'Neha Sharma',
       'amount': '₹11,000',
       'dueDate': 'April 10, 2026',
       'months': '2 months due',
     },
     {
-      'flat': 'Block C-301',
+      'flat': 'Wing C-301',
       'owner': 'Rohan Gupta',
       'amount': '₹5,500',
       'dueDate': 'May 10, 2026',
@@ -163,20 +163,14 @@ class _SecretaryMaintenanceScreenState extends State<SecretaryMaintenanceScreen>
                         width: double.infinity,
                         height: 46,
                         child: FilledButton(
-                          onPressed: _isGenerating ? null : _generateBills,
+                          onPressed: () => context.push('/bill-generation'),
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF8B5CF6),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          child: _isGenerating
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Text('Generate June 2026 Bills'),
+                          child: const Text('Generate Monthly Bills'),
                         ),
                       ),
                     ],

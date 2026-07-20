@@ -2,7 +2,7 @@ class Resident {
   final String id;
   String name;
   String flatNumber;
-  String block;
+  String wing;
   String mobile;
   String email;
   bool isOwner;
@@ -15,7 +15,7 @@ class Resident {
     required this.id,
     required this.name,
     required this.flatNumber,
-    required this.block,
+    required this.wing,
     required this.mobile,
     required this.email,
     this.isOwner = false,

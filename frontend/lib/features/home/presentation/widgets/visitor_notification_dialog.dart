@@ -218,7 +218,7 @@ class _VisitorNotificationDialogState extends State<VisitorNotificationDialog> {
                   const SizedBox(height: 4),
                   // Society / Building Subtitle
                   Text(
-                    CurrentUser.societyName ?? 'A Block, Raj Empire Society',
+                    CurrentUser.societyName ?? 'A Wing, Raj Empire Society',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF6B7280),
