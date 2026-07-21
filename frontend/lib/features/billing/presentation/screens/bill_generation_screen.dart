@@ -26,6 +26,8 @@ class _BillGenerationScreenState extends ConsumerState<BillGenerationScreen> {
   String _selectedMonth = 'January';
   String _selectedYear = '2026';
   bool _isRecurring = false;
+  String _billingTarget = 'all';
+  String? _selectedResidentId;
 
   final List<String> _months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -98,7 +100,12 @@ class _BillGenerationScreenState extends ConsumerState<BillGenerationScreen> {
     for (final bhk in _bhkTypes) {
       counts[bhk] = 0;
     }
-    for (final resident in _residents) {
+    
+    final targetResidents = _billingTarget == 'specific' && _selectedResidentId != null
+        ? _residents.where((r) => r['id'] == _selectedResidentId).toList()
+        : _residents;
+
+    for (final resident in targetResidents) {
       final bhk = resident['bhk_type'] as String? ?? '2BHK';
       if (counts.containsKey(bhk)) {
         counts[bhk] = counts[bhk]! + 1;
@@ -142,7 +149,12 @@ class _BillGenerationScreenState extends ConsumerState<BillGenerationScreen> {
 
       final counts = _getResidentCountByBhk();
       final entries = <Map<String, dynamic>>[];
-      for (final resident in _residents) {
+      
+      final targetResidents = _billingTarget == 'specific' && _selectedResidentId != null
+          ? _residents.where((r) => r['id'] == _selectedResidentId).toList()
+          : _residents;
+
+      for (final resident in targetResidents) {
         final bhk = resident['bhk_type'] as String? ?? '2BHK';
         final categoryAmounts = <String, double>{};
         double residentTotal = 0;
@@ -174,10 +186,14 @@ class _BillGenerationScreenState extends ConsumerState<BillGenerationScreen> {
         }).toList(),
         'entries': entries,
         'total_amount': _calculateGrandTotal(),
-        'resident_count': _residents.length,
+        'resident_count': targetResidents.length,
       };
 
-      final title = '$_selectedMonth $_selectedYear Maintenance Bill';
+      final residentName = _billingTarget == 'specific' && targetResidents.isNotEmpty
+          ? ' - ${targetResidents.first['name']} (${targetResidents.first['wing']}-${targetResidents.first['flat_no']})'
+          : '';
+      final title = '$_selectedMonth $_selectedYear Maintenance Bill$residentName';
+      
       await billingService.createWorkflowItem(
         type: 'bill',
         title: title,
@@ -244,6 +260,11 @@ class _BillGenerationScreenState extends ConsumerState<BillGenerationScreen> {
                           const SizedBox(height: 32),
                           
                           _buildRecurringToggle(),
+                          const SizedBox(height: 32),
+                          const Divider(color: Color(0xFFE4E4E7)),
+                          const SizedBox(height: 24),
+                          
+                          _buildTargetSelector(),
                           const SizedBox(height: 32),
                           const Divider(color: Color(0xFFE4E4E7)),
                           const SizedBox(height: 24),
@@ -360,6 +381,77 @@ class _BillGenerationScreenState extends ConsumerState<BillGenerationScreen> {
           onChanged: (v) => setState(() => _isRecurring = v),
           activeColor: const Color(0xFF3B82F6),
         ),
+      ],
+    );
+  }
+
+  Widget _buildTargetSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Bill Target', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('All Flats', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                value: 'all',
+                groupValue: _billingTarget,
+                onChanged: (val) => setState(() {
+                  _billingTarget = val!;
+                  _selectedResidentId = null;
+                }),
+                contentPadding: EdgeInsets.zero,
+                activeColor: const Color(0xFF3B82F6),
+              ),
+            ),
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('Specific Flat', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                value: 'specific',
+                groupValue: _billingTarget,
+                onChanged: (val) => setState(() {
+                  _billingTarget = val!;
+                  if (_residents.isNotEmpty) {
+                    _selectedResidentId = _residents.first['id'] as String;
+                  }
+                }),
+                contentPadding: EdgeInsets.zero,
+                activeColor: const Color(0xFF3B82F6),
+              ),
+            ),
+          ],
+        ),
+        if (_billingTarget == 'specific') ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F4F5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedResidentId,
+                isExpanded: true,
+                hint: const Text('Select a flat', style: TextStyle(fontSize: 14)),
+                icon: const Icon(Icons.expand_more, color: Color(0xFF6B7280)),
+                items: _residents.map((r) {
+                  final wing = r['wing'] ?? '';
+                  final flat = r['flat_no'] ?? '';
+                  final name = r['name'] ?? 'Unknown';
+                  final label = '$wing-$flat : $name';
+                  return DropdownMenuItem<String>(
+                    value: r['id'] as String,
+                    child: Text(label, style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937))),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => _selectedResidentId = v),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

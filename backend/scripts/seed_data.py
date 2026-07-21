@@ -30,7 +30,7 @@ from apps.visitors.models import GateLog, Visitor
 
 FIRST_NAMES = ["Rohan", "Priya", "Rajesh", "Meera", "Vikram", "Lakshmi", "Ravi", "Anita", "Suresh", "Deepa"]
 LAST_NAMES = ["Mehta", "Sharma", "Kumar", "Singh", "Patel", "Gupta", "Reddy", "Nair", "Iyer", "Joshi"]
-FLAT_NOS = [f"Flat {i}" for i in range(200, 520)]
+FLAT_NOS = list(range(200, 520))
 VISITOR_TYPES = ["guest", "delivery", "service"]
 
 
@@ -84,16 +84,16 @@ def create_residents(society, count=10):
 def create_explicit_residents(society):
     """Create the explicit test residents from TEST_CREDENTIALS.txt"""
     explicit_residents = [
-        ("Amit Verma", "9111111111", "Flat 101"),
-        ("Neha Gupta", "9222222222", "Flat 102"),
-        ("Suresh Patel", "9333333333", "Flat 103"),
-        ("Priya Nair", "9444444444", "Flat 104"),
-        ("Vikram Rao", "9555555555", "Flat 105"),
-        ("Ananya Desai", "9666666666", "Flat 106"),
-        ("Rajesh Sharma", "9777777777", "Flat 107"),
-        ("Kavita Menon", "9888888888", "Flat 108"),
-        ("Deepak Joshi", "9900000001", "Flat 109"),
-        ("Meera Iyer", "9900000002", "Flat 110"),
+        ("Amit Verma", "9111111111", 101),
+        ("Neha Gupta", "9222222222", 102),
+        ("Suresh Patel", "9333333333", 103),
+        ("Priya Nair", "9444444444", 104),
+        ("Vikram Rao", "9555555555", 105),
+        ("Ananya Desai", "9666666666", 106),
+        ("Rajesh Sharma", "9777777777", 107),
+        ("Kavita Menon", "9888888888", 108),
+        ("Deepak Joshi", "9900000001", 109),
+        ("Meera Iyer", "9900000002", 110),
     ]
     residents = []
     for name, phone, flat in explicit_residents:
@@ -143,7 +143,7 @@ def create_admins(society):
         user=user,
         defaults={
             "society": society,
-            "flat_no": "Admin Office",
+            "flat_no": 999,  # Admin Office
             "is_owner": True,
         },
     )
@@ -181,7 +181,7 @@ def create_workflow_users(society):
             user.save()
         ResidentProfile.objects.update_or_create(
             user=user,
-            defaults={"society": society, "flat_no": f"Flat {111 + index}", "is_owner": True},
+            defaults={"society": society, "flat_no": 111 + index, "is_owner": True},
         )
         workflow_users.append(user)
     return workflow_users
@@ -270,12 +270,12 @@ def create_visitors(society):
     """Create pre-approved visitors."""
     visitors = []
     visitor_data = [
-        ("Rohan Mehta", "guest", "Flat 402", "expected"),
-        ("Amazon Delivery", "delivery", "Flat 105", "expected"),
-        ("Plumber - Rajesh", "service", "Flat 201", "expected"),
-        ("Meera Sharma", "guest", "Flat 305", "expected"),
-        ("Swiggy Delivery", "delivery", "Flat 502", "entered"),
-        ("Priya Sharma", "guest", "Flat 102", "entered"),
+        ("Rohan Mehta", "guest", 402, "expected"),
+        ("Amazon Delivery", "delivery", 105, "expected"),
+        ("Plumber - Rajesh", "service", 201, "expected"),
+        ("Meera Sharma", "guest", 305, "expected"),
+        ("Swiggy Delivery", "delivery", 502, "entered"),
+        ("Priya Sharma", "guest", 102, "entered"),
     ]
     for name, vtype, flat, status in visitor_data:
         visitor, created = Visitor.objects.get_or_create(

@@ -27,7 +27,7 @@ class Visitor(BaseModel):
     vehicle_number = models.CharField(max_length=20, null=True, blank=True)
     people_count = models.IntegerField(default=1)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default="guest")
-    flat = models.CharField(max_length=50, help_text="Flat number being visited")
+    flat = models.IntegerField(help_text="Flat number being visited")
     expected_time = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="expected")
     entry_time = models.DateTimeField(null=True, blank=True)
@@ -48,18 +48,8 @@ class Visitor(BaseModel):
             models.Index(fields=["society", "type", "status"]),
         ]
 
-    def save(self, *args, **kwargs):
-        if self.flat:
-            s = self.flat.strip()
-            if s.lower().startswith("flat"):
-                num = s[4:].strip()
-                self.flat = f"Flat {num}"
-            else:
-                self.flat = f"Flat {s}"
-        super().save(*args, **kwargs)
-
     def __str__(self):
-        return f"{self.name} ({self.type}) - {self.flat}"
+        return f"{self.name} ({self.type}) - Flat {self.flat}"
 
 
 class GateLog(BaseModel):

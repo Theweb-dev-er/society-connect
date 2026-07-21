@@ -39,6 +39,7 @@ import '../../features/billing/presentation/screens/expense_entry_screen.dart';
 import '../../features/billing/presentation/screens/audit_log_screen.dart';
 import '../../features/billing/presentation/screens/manage_billing_categories_screen.dart';
 import '../../features/billing/presentation/screens/bill_generation_screen.dart';
+import '../../features/billing/presentation/screens/bills_list_screen.dart';
 import '../../features/auth/presentation/screens/manage_residents_screen.dart';
 import '../../features/auth/presentation/screens/manage_security_guards_screen.dart';
 import '../../features/subscription/presentation/screens/subscribe_screen.dart';
@@ -243,6 +244,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.manageBillingCategories,
         builder: (context, state) => const ManageBillingCategoriesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.bills,
+        builder: (context, state) => const BillsListScreen(),
       ),
       GoRoute(
         path: '/bill-generation',

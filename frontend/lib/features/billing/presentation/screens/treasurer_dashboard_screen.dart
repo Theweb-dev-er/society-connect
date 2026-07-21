@@ -189,6 +189,21 @@ class _TreasurerDashboardScreenState extends State<TreasurerDashboardScreen> {
                 subtitle: 'From Secretary, awaiting review',
                 time: 'Yesterday, 10:30 AM',
               ),
+              const SizedBox(height: 20),
+
+              _buildSectionHeader('Generated Bills', 'View All', () {
+                context.push(AppRoutes.bills);
+              }),
+              const SizedBox(height: 12),
+              _buildActivityItem(
+                icon: Icons.receipt_outlined,
+                iconColor: const Color(0xFF06B6D4),
+                bgColor: const Color(0xFFECFEFF),
+                title: 'All Bills',
+                subtitle: 'View all generated bills with status',
+                time: '',
+                onTap: () => context.push(AppRoutes.bills),
+              ),
             ],
           ),
         ),
@@ -313,15 +328,18 @@ class _TreasurerDashboardScreenState extends State<TreasurerDashboardScreen> {
     required String title,
     required String subtitle,
     required String time,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -341,6 +359,7 @@ class _TreasurerDashboardScreenState extends State<TreasurerDashboardScreen> {
           ),
           Text(time, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
         ],
+        ),
       ),
     );
   }

@@ -785,7 +785,7 @@ class _ManageResidentsScreenState extends ConsumerState<ManageResidentsScreen> {
                           : _buildTextField('Wing (e.g. A)', wingController),
                     ),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildTextField('Flat No (e.g. 101)', flatNoController)),
+                    Expanded(child: _buildTextField('Flat No (e.g. 101)', flatNoController, keyboardType: TextInputType.number)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -825,6 +825,11 @@ class _ManageResidentsScreenState extends ConsumerState<ManageResidentsScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All fields are required')));
                         return;
                       }
+                      final flatNo = int.tryParse(flatNoController.text.trim());
+                      if (flatNo == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Flat number must be a valid number')));
+                        return;
+                      }
                       Navigator.pop(context);
                       setState(() => _isLoading = true);
                       try {
@@ -832,8 +837,8 @@ class _ManageResidentsScreenState extends ConsumerState<ManageResidentsScreen> {
                         await service.addResidentManually(
                           nameController.text.trim(),
                           phoneController.text.trim(),
-                          wingValue!.trim(),
-                          flatNoController.text.trim(),
+                          wingValue.trim(),
+                          flatNo,
                           true, // Automatically set as owner
                           bhkType: selectedBhk,
                         );

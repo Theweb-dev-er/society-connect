@@ -498,6 +498,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 10),
           ],
+          if (CurrentUser.isAdmin || CurrentUser.isMaker || CurrentUser.isChecker || CurrentUser.isApprover) ...[
+            _buildWorkflowAction(
+              icon: Icons.receipt_outlined,
+              iconColor: const Color(0xFF06B6D4),
+              bgColor: const Color(0xFFECFEFF),
+              title: 'View Bills',
+              subtitle: 'All generated bills with status',
+              onTap: () => context.push(AppRoutes.bills),
+            ),
+            const SizedBox(height: 10),
+          ],
           if (CurrentUser.isChecker) ...[
             _buildWorkflowAction(
               icon: Icons.fact_check,

@@ -74,6 +74,13 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
     }
   }
 
+  double _parseAmount(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.replaceAll(',', '')) ?? 0.0;
+    return 0.0;
+  }
+
   String _stageLabel(String stage) {
     switch (stage) {
       case 'draft': return 'Draft';
@@ -360,7 +367,7 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Rs.${(item['amount'] as num).toStringAsFixed(0)}',
+                          'Rs.${_parseAmount(item['amount']).toStringAsFixed(0)}',
                           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
                         ),
                         const SizedBox(height: 16),

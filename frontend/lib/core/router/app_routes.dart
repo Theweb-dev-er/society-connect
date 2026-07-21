@@ -38,6 +38,9 @@ class AppRoutes {
   static const String manageSecurityGuards = '/manage-security-guards';
   static const String manageBillingCategories = '/manage-billing-categories';
 
+  // Bills
+  static const String bills = '/bills';
+
   // Subscription
   static const String subscribe = '/subscribe';
   

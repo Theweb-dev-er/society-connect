@@ -15,7 +15,7 @@ class ResidentProfile(BaseModel):
         on_delete=models.CASCADE,
         related_name="resident_profile",
     )
-    flat_no = models.CharField(max_length=50, db_index=True)
+    flat_no = models.IntegerField(db_index=True)
     wing = models.CharField(max_length=50, blank=True, help_text="Wing or Block name")
     is_owner = models.BooleanField(default=True, help_text="True if owner, False if tenant")
 

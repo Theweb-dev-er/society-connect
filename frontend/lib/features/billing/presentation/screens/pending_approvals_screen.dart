@@ -123,6 +123,13 @@ class _PendingApprovalsScreenState extends ConsumerState<PendingApprovalsScreen>
     );
   }
 
+  double _parseAmount(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.replaceAll(',', '')) ?? 0.0;
+    return 0.0;
+  }
+
   Widget _buildItemCard(dynamic item) {
     final isBill = item['type'] == 'bill';
     final stageLabel = widget.role == 'checker' ? 'Pending Review' : 'Ready for Approval';
@@ -213,7 +220,7 @@ class _PendingApprovalsScreenState extends ConsumerState<PendingApprovalsScreen>
                           const Text('Amount', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
                           const SizedBox(height: 2),
                           Text(
-                            'Rs.${(item['amount'] as num).toStringAsFixed(0)}',
+                            'Rs.${_parseAmount(item['amount']).toStringAsFixed(0)}',
                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
                           ),
                         ],

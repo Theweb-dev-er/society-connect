@@ -88,7 +88,7 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
       final authService = ref.read(authServiceProvider);
       
       final Map<String, dynamic> data = {
-        'flat_no': _flatController.text.trim(),
+        'flat_no': int.tryParse(_flatController.text.trim()) ?? 0,
         'is_owner': CurrentUser.isOwner,
       };
       
@@ -217,7 +217,12 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
                         controller: _flatController,
                         hint: 'e.g. 101',
                         prefix: Icons.door_front_door_outlined,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Flat number is required' : null,
+                        keyboardType: TextInputType.number,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Flat number is required';
+                          if (int.tryParse(v.trim()) == null) return 'Must be a valid number';
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 
@@ -290,10 +295,12 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
     required String hint,
     required IconData prefix,
     String? Function(String?)? validator,
+    TextInputType? keyboardType,
   }) {
     return TextFormField(
       controller: controller,
       validator: validator,
+      keyboardType: keyboardType,
       style: const TextStyle(fontSize: 14, color: Color(0xFF1F2937)),
       decoration: InputDecoration(
         hintText: hint,

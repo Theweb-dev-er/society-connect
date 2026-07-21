@@ -42,7 +42,7 @@ class ResidentService {
     return response.data;
   }
 
-  Future<dynamic> addResidentManually(String name, String phone, String wing, String flatNo, bool isOwner, {String? bhkType}) async {
+  Future<dynamic> addResidentManually(String name, String phone, String wing, int flatNo, bool isOwner, {String? bhkType}) async {
     final response = await _dio.post('/residents/admin-add/', data: {
       'name': name,
       'phone': phone,
